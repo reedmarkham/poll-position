@@ -30,19 +30,49 @@ poll-position/
 
 ## 🔐 Prerequisites
 
-- A secret in AWS Secrets Manager named `CFB_API_KEY` with JSON value: `{ "CFB_API_KEY": "your-api-key" }`
+- The access key for a previously-created (i.e. via console or other stack) AWS IAM user, with a minimal policy like:
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:*",
+        "iam:CreateRole",
+        "iam:AttachRolePolicy",
+        "iam:PassRole",
+        "iam:DeleteRole",
+        "iam:DetachRolePolicy",
+        "s3:*",
+        "ecs:*",
+        "ecr:*",
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret",
+        "logs:*",
+        "events:*"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+- A secret in AWS Secrets Manager named `CFB_API_KEY` with JSON value:
+  - `{ "CFB_API_KEY": "your-api-key" }`
 - Before the GitHub Actions workflow can run, you need to add the following secrets to your repository:
 1. Go to your GitHub repository.
 2. Navigate to **Settings > Secrets and variables > Actions**.
-3. Add the following secrets:
+3. Add the following **repository secrets**:
 
 | Secret Name           | Description                                      |
 |-----------------------|--------------------------------------------------|
-| `AWS_REGION`          | The AWS region where the resources will be deployed (e.g., `us-east-1`). |
+| `AWS_REGION`          | The AWS region where the resources will be deployed. |
 | `AWS_ACCOUNT_ID`      | Your AWS account ID.                             |
 | `S3_BUCKET`           | The name of the S3 bucket where the application will upload data. |
-| `AWS_ACCESS_KEY_ID`   | Your AWS access key ID.                          |
-| `AWS_SECRET_ACCESS_KEY` | Your AWS secret access key.                    |
+| `AWS_ACCESS_KEY_ID`   | Your AWS access key ID (for the existing IAM user with policy above). |
+| `AWS_SECRET_ACCESS_KEY` | Your AWS secret access key (also for the user above). |
+| `AWS_IAM_ARN`         | The ARN for the previously-created IAM user with minimal policy. |
 
 ## 🚀 Deployment Instructions
 

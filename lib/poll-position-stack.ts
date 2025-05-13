@@ -15,10 +15,20 @@ export class PollPositionStack extends cdk.Stack {
     const vpc = new ec2.Vpc(this, 'PollPositionVpc', { maxAzs: 2 });
     const cluster = new ecs.Cluster(this, 'PollPositionCluster', { vpc });
     const cfbSecret = secretsmanager.Secret.fromSecretNameV2(this, 'CfbApiKeySecret', 'CFB_API_KEY');
-
+    
     const taskRole = new iam.Role(this, 'PollPositionTaskRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
     });
+
+    // Grant the IAM user permissions to assume the task role
+    const iamUserArn = process.env.AWS_IAM_ARN;
+    if (!iamUserArn) {
+      throw new Error('Environment variable AWS_IAM_ARN is not defined');
+    }
+    const iamUser = iam.User.fromUserArn(this, 'PollPositionIamUser', iamUserArn);
+
+    taskRole.grantAssumeRole(iamUser);
+
     cfbSecret.grantRead(taskRole);
 
     const logGroup = new logs.LogGroup(this, 'PollPositionLogGroup');
@@ -29,7 +39,10 @@ export class PollPositionStack extends cdk.Stack {
       taskRole,
     });
 
-    const s3BucketName = process.env.S3_BUCKET || 'poll-position'; // Fallback to a default if not set
+    const s3BucketName = process.env.S3_BUCKET;
+    if (!s3BucketName) {
+      throw new Error('Environment variable S3_BUCKET is not defined');
+    }
 
     // Create the S3 bucket
     const bucket = new s3.Bucket(this, 'PollPositionBucket', {
