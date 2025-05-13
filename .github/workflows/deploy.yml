@@ -46,17 +46,23 @@ jobs:
       run: |
         aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
-    # Step 6: Build and push Docker image
+    # Step 6: Ensure ECR Repository Exists
+    - name: Ensure ECR Repository Exists
+      run: |
+        aws ecr describe-repositories --repository-names poll-position --region $AWS_REGION || \
+        aws ecr create-repository --repository-name poll-position --region $AWS_REGION
+
+    # Step 7: Build and push Docker image
     - name: Build and Push Docker Image
       run: |
         docker build -t poll-position -f app/Dockerfile app
         docker tag poll-position:latest ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position:latest
         docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position:latest
 
-    # Step 7: Bootstrap CDK (if needed)
+    # Step 8: Bootstrap CDK (if needed)
     - name: Bootstrap CDK
       run: npx cdk bootstrap aws://${ACCOUNT_ID}/${AWS_REGION}
 
-    # Step 8: Deploy CDK Stack
+    # Step 9: Deploy CDK Stack
     - name: Deploy CDK Stack
       run: npx cdk deploy --require-approval never
