@@ -33,10 +33,25 @@ export class PollPositionStack extends cdk.Stack {
 
     const logGroup = new logs.LogGroup(this, 'PollPositionLogGroup');
 
+    const executionRole = new iam.Role(this, 'PollPositionExecutionRole', {
+      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
+    });
+    executionRole.addToPolicy(new iam.PolicyStatement({
+      actions: [
+        "ecr:GetAuthorizationToken",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      resources: ["*"],
+    }));
+
     const taskDef = new ecs.FargateTaskDefinition(this, 'PollPositionTaskDef', {
       memoryLimitMiB: 1024,
       cpu: 512,
       taskRole,
+      executionRole,
     });
 
     const s3BucketName = process.env.S3_BUCKET;
