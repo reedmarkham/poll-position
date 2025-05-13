@@ -50,7 +50,13 @@ poll-position/
         "secretsmanager:GetSecretValue",
         "secretsmanager:DescribeSecret",
         "logs:*",
-        "events:*"
+        "events:*",
+        "ec2:DescribeAvailabilityZones",
+        "ec2:DescribeVpcs",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeRouteTables",
+        "ec2:DescribeInternetGateways"
       ],
       "Resource": "*"
     }
