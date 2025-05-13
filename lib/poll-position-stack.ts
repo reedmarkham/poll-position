@@ -49,8 +49,8 @@ export class PollPositionStack extends cdk.Stack {
     }));
 
     const taskDef = new ecs.FargateTaskDefinition(this, 'PollPositionTaskDef', {
-      memoryLimitMiB: 1024,
-      cpu: 512,
+      memoryLimitMiB: 512, // Minimum for 256 CPU
+      cpu: 256,            // Minimum allowed
       taskRole,
       executionRole,
     });
