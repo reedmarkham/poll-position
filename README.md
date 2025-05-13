@@ -14,15 +14,12 @@ poll-position/
 ├── bin/
 │   └── poll-position.ts            # CDK entrypoint
 ├── lib/
-│   └── poll-position-stack.ts      # CDK stack definition (S3, VPC, ECS, Fargate, Logs, Secrets)
+│   └── poll-position-stack.ts      # CDK stack definition (S3, VPC, ECS, Fargate, Logs, Secrets, etc.)
 ├── app/
-│   ├── main.py                     # Python app querying API and uploading to S3
+│   ├── main.py                     # Python app to get raw data from API and upload to S3
 │   ├── Dockerfile                  # Dockerfile for containerizing the app
-│   ├── deploy.sh                   # Script to build and push Docker image
 │   └── requirements.txt            # Python dependencies for the app
-├── node_modules/                   # Node.js dependencies (auto-generated)
 ├── package.json                    # NPM dependencies for CDK
-├── package-lock.json               # Lockfile for NPM dependencies
 ├── tsconfig.json                   # TypeScript configuration
 ├── cdk.json                        # CDK app configuration
 └── cdk.context.json                # CDK context for environment-specific configurations (auto-generated)
