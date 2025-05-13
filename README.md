@@ -1,8 +1,10 @@
 # 🏈 poll-position
 
-This project deploys AWS Fargate task, S3 bucket, and other requisite infrastructure to ingest data from CollegeFootballData API using a containerized process.
+This project uses AWS CDK to deploy an AWS Fargate task, S3 bucket, and other requisite infrastructure to ingest raw data from CollegeFootballData API to S3 using a containerized process.
 
 The data will be used downstream in a dashboard app that visualizes the college football rankings with other team metadata.
+
+Other opportunities include a more robust pipeline for cleansing and curating the raw data.
 
 ## 📁 Folder Structure
 
