@@ -49,7 +49,7 @@ jobs:
     # Step 6: Build and push Docker image
     - name: Build and Push Docker Image
       run: |
-        docker build -t poll-position .
+        docker build -t poll-position -f app/Dockerfile app
         docker tag poll-position:latest ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position:latest
         docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position:latest
 
