@@ -67,6 +67,8 @@ export class PollPositionStack extends cdk.Stack {
       autoDeleteObjects: true, // Automatically delete objects in the bucket when the bucket is deleted
     });
 
+    bucket.grantPut(taskRole); // eventually this may need to be bucket.grantReadWrite(taskRole)
+
     taskDef.addContainer('PollPositionContainer', {
       image: ecs.ContainerImage.fromRegistry(`${cdk.Aws.ACCOUNT_ID}.dkr.ecr.${cdk.Aws.REGION}.amazonaws.com/poll-position:latest`),
       logging: ecs.LogDriver.awsLogs({
