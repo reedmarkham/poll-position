@@ -73,7 +73,6 @@ export class PollPositionStack extends cdk.Stack {
         streamPrefix: 'poll-position',
         logGroup,
       }),
-      entryPoint: ['/entrypoint.sh'],
       environment: {
         S3_BUCKET: bucket.bucketName, // Dynamically set the S3_BUCKET environment variable
       },
