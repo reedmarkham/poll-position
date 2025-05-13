@@ -56,7 +56,10 @@ poll-position/
         "ec2:DescribeSubnets",
         "ec2:DescribeSecurityGroups",
         "ec2:DescribeRouteTables",
-        "ec2:DescribeInternetGateways"
+        "ec2:DescribeInternetGateways",
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:GetParametersByPath"
       ],
       "Resource": "*"
     }
