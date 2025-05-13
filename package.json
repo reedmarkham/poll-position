@@ -1,0 +1,13 @@
+{
+  "name": "poll-position",
+  "version": "0.1.0",
+  "dependencies": {
+    "aws-cdk-lib": "^2.100.0",
+    "constructs": "^10.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.17",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  }
+}
