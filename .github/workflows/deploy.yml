@@ -33,7 +33,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version: '18'
 
       - name: Install Dependencies
         run: npm install
@@ -70,6 +70,21 @@ jobs:
           if [ "$ACTUAL_QUALIFIER" != "$BOOTSTRAP_QUALIFIER" ]; then
             echo "❌ Mismatch: expected '$BOOTSTRAP_QUALIFIER' but found '$ACTUAL_QUALIFIER'"
             exit 1
+          fi
+
+      - name: Validate CDK App Configuration
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+          ACTUAL=$(jq -r '.app' cdk.json)
+          EXPECTED="npx ts-node bin/poll-position.ts"
+
+          if [[ "$ACTUAL" != "$EXPECTED" ]]; then
+            echo "❌ Error: cdk.json 'app' is misconfigured."
+            echo "Expected: $EXPECTED"
+            echo "Found:    $ACTUAL"
+            exit 1
+          else
+            echo "✅ cdk.json app configuration is correct."
           fi
 
 
