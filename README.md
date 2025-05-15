@@ -86,6 +86,9 @@ poll-position/
 
 Make sure to use a <=10 chracter `--qualifier`:
 ```
+export AWS_IAM_ARN = <the ARN of the IAM user with minimal policy from above>;
+export S3_BUCKET = <whatever bucket name you will like>;
+
 npx cdk bootstrap \
   --toolkit-stack-name CDKToolkit-poll-position \
   --qualifier pollpstn \
