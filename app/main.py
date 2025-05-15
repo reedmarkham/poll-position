@@ -17,12 +17,10 @@ import polars as pl
 API_KEY: Optional[str] = os.getenv("CFB_API_KEY")
 BUCKET: Optional[str] = os.getenv("S3_BUCKET")
 YEAR: int = 2024
+TIMESTAMP: str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%SZ")
 
 # Initialize S3 client
 s3 = boto3.client("s3")
-
-# Generate a timestamp for unique S3 keys
-timestamp: str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%SZ")
 
 def fetch_and_upload_data(endpoint: str, params: Dict[str, Any], s3_key_prefix: str) -> None:
     """
@@ -42,7 +40,7 @@ def fetch_and_upload_data(endpoint: str, params: Dict[str, Any], s3_key_prefix: 
     data = response.json()
 
     # Generate a unique S3 key
-    s3_key: str = f"{s3_key_prefix}_{timestamp}.json"
+    s3_key: str = f"{s3_key_prefix}_{TIMESTAMP}.json"
 
     # Upload data to S3
     s3.put_object(Bucket=BUCKET, Key=s3_key, Body=json.dumps(data))
@@ -91,7 +89,7 @@ def flatten_teams(data: Any) -> Any:
     # If teams data is a list of dicts, this will work:
     return data
 
-def merge_and_write_polars() -> None:
+def merge_and_write_polars(s3_key_prefix: str) -> None:
     # 1. Get latest files
     rankings_key: str = get_latest_s3_key("raw/rankings_")
     teams_key: str = get_latest_s3_key("raw/teams_")
@@ -105,8 +103,8 @@ def merge_and_write_polars() -> None:
     # 3. Merge on 'school'
     merged: pl.DataFrame = rankings_df.join(teams_df, on="school", how="left")
 
-    # 4. Write to S3 as cleansed/poll_<timestamp>.json
-    out_key: str = f"cleansed/poll_{timestamp}.json"
+    # 4. Write to S3 as cleansed/poll_<TIMESTAMP>.json
+    out_key: str = f"{s3_key_prefix}_{TIMESTAMP}.json"
     s3.put_object(
         Bucket=BUCKET,
         Key=out_key,
@@ -114,19 +112,23 @@ def merge_and_write_polars() -> None:
     )
     print(f"Merged data written to s3://{BUCKET}/{out_key}")
 
-# Define the datasets to fetch and upload
-datasets: List[Dict[str, Any]] = [
-    {"endpoint": "https://api.collegefootballdata.com/rankings", "s3_key_prefix": "rankings"},
-    {"endpoint": "https://api.collegefootballdata.com/teams", "s3_key_prefix": "teams"}
+def main() -> None:
+    # Define the datasets to fetch and upload
+    datasets: List[Dict[str, Any]] = [
+        {"endpoint": "https://api.collegefootballdata.com/rankings", "s3_key_prefix": "raw/rankings"},
+        {"endpoint": "https://api.collegefootballdata.com/teams", "s3_key_prefix": "raw/teams"}
     ]
 
-# Loop through the datasets and fetch/upload data specific to the year 2024
-for dataset in datasets:
-    fetch_and_upload_data(
-        endpoint=dataset["endpoint"],
-        params={"year": YEAR},
-        s3_key_prefix=dataset["s3_key_prefix"]
-    )
+    # Loop through the datasets and fetch/upload data specific to the year
+    for dataset in datasets:
+        fetch_and_upload_data(
+            endpoint=dataset["endpoint"],
+            params={"year": YEAR},
+            s3_key_prefix=dataset["s3_key_prefix"]
+        )
 
-# Merge and write the data
-merge_and_write_polars()
+    # Merge and write the data
+    merge_and_write_polars('cleansed/poll')
+
+if __name__ == "__main__":
+    main()
