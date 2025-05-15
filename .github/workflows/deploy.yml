@@ -18,7 +18,7 @@ jobs:
       S3_BUCKET: ${{ secrets.S3_BUCKET }}
       AWS_IAM_ARN: ${{ secrets.AWS_IAM_ARN }}
       TOOLKIT_STACK: CDKToolkit-poll-position
-      STACK_NAME: poll-position
+      STACK_NAME: PollPositionStack
       BOOTSTRAP_QUALIFIER: pollpstn # must be <=10 characters, to identify above and match `cdk.json` qualifier
 
     steps:
