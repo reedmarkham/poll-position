@@ -82,16 +82,34 @@ poll-position/
 | `AWS_SECRET_ACCESS_KEY` | Your AWS secret access key (also for the user above). |
 | `AWS_IAM_ARN`         | The ARN for the previously-created IAM user with minimal policy. |
 
-## 🚀 Deployment Instructions
+**Bootstrap the environment outside of CI/CD:**
 
-This project uses GitHub Actions for CI/CD. On every commit to the `main` branch, the following steps are automatically performed:
+```
+npx cdk bootstrap \
+  --toolkit-stack-name CDKToolkit-poll-position \
+  --qualifier pollpstn \
+  aws://<AWS_ACCOUNT_ID>/<AWS_REGION>
+```
+See the `cdk.json` for how to reference this:
+
+```
+{
+  "app": "npx ts-node --prefer-ts-exts bin/poll-position.ts",
+  "context": {
+    "aws:cdk:bootstrap-qualifier": "pollpstn"
+  }
+}
+```
+
+## CI/CD
+
+On every commit to the `main` branch, the following steps are automatically performed:
 
 1. Install dependencies.
 2. Build and push the Docker image to Amazon ECR.
-3. Bootstrap the CDK environment (if needed).
-4. Deploy the CDK stack.
+3. Deploy the CDK stack.
 
-### 📈 Ad-Hoc Execution
+### Execution
 
 Ensure the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) is installed and configured with credentials that have sufficient permissions.
 
@@ -107,6 +125,8 @@ aws ecs run-task \
   --task-definition YOUR_TASK_DEF_ARN
 ```
 
-## 🗓️ Scheduled Execution
+Alternatively, use the AWS console to find the task and trigger it in the UI.
+
+## Scheduled Execution
 
 The task is configured to run automatically every Monday at 12:00 PM UTC (8:00 AM ET).

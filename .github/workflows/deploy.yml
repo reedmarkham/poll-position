@@ -19,6 +19,7 @@ jobs:
       AWS_IAM_ARN: ${{ secrets.AWS_IAM_ARN }}
       TOOLKIT_STACK: CDKToolkit-poll-position
       STACK_NAME: poll-position
+      BOOTSTRAP_QUALIFIER: pollpstn # must be <=10 characters, to identify above and match `cdk.json` qualifier
 
     steps:
     # Step 1: Checkout the repository
@@ -77,6 +78,7 @@ jobs:
       run: |
         npx cdk bootstrap \
           --toolkit-stack-name $TOOLKIT_STACK \
+          --qualifier $BOOTSTRAP_QUALIFIER \
           aws://$ACCOUNT_ID/$AWS_REGION
 
     # Step 10: Deploy CDK Stack
