@@ -17,6 +17,8 @@ jobs:
       ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       S3_BUCKET: ${{ secrets.S3_BUCKET }}
       AWS_IAM_ARN: ${{ secrets.AWS_IAM_ARN }}
+      TOOLKIT_STACK: CDKToolkit-poll-position
+      STACK_NAME: poll-position
 
     steps:
     # Step 1: Checkout the repository
@@ -59,10 +61,28 @@ jobs:
         docker tag poll-position:latest ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position:latest
         docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position:latest
 
-    # Step 8: Bootstrap CDK (if needed)
-    - name: Bootstrap CDK
-      run: npx cdk bootstrap aws://${ACCOUNT_ID}/${AWS_REGION}
+    # Step 8: Check for Existing Bootstrap Stack
+    - name: Check if CDK bootstrap is needed
+      id: check-bootstrap
+      run: |
+        STATUS=$(aws cloudformation describe-stacks \
+          --stack-name $TOOLKIT_STACK \
+          --region $AWS_REGION \
+          --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo "MISSING")
+        echo "status=$STATUS" >> "$GITHUB_OUTPUT"
 
-    # Step 9: Deploy CDK Stack
+    # Step 9: Conditionally Bootstrap CDK
+    - name: Bootstrap CDK (only if missing)
+      if: steps.check-bootstrap.outputs.status == 'MISSING'
+      run: |
+        npx cdk bootstrap \
+          --toolkit-stack-name $TOOLKIT_STACK \
+          aws://$ACCOUNT_ID/$AWS_REGION
+
+    # Step 10: Deploy CDK Stack
     - name: Deploy CDK Stack
-      run: npx cdk deploy --require-approval never
+      run: |
+        npx cdk deploy \
+          --toolkit-stack-name $TOOLKIT_STACK \
+          $STACK_NAME \
+          --require-approval never
