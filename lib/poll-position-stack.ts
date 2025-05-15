@@ -10,7 +10,12 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 
 export class PollPositionStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
-    super(scope, id, props);
+    super(scope, id, {
+      ...props,
+      synthesizer: new cdk.DefaultStackSynthesizer({
+        qualifier: 'pollpstn',
+      }),
+    });
 
     const vpc = new ec2.Vpc(this, 'PollPositionVpc', { maxAzs: 2 });
     const cluster = new ecs.Cluster(this, 'PollPositionCluster', { vpc });
