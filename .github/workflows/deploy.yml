@@ -60,5 +60,6 @@ jobs:
         run: |
           npx cdk deploy \
             --toolkit-stack-name $TOOLKIT_STACK \
+            --context aws:cdk:bootstrap-qualifier=$BOOTSTRAP_QUALIFIER \
             $STACK_NAME \
             --require-approval never
