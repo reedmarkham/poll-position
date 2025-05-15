@@ -82,15 +82,16 @@ poll-position/
 | `AWS_SECRET_ACCESS_KEY` | Your AWS secret access key (also for the user above). |
 | `AWS_IAM_ARN`         | The ARN for the previously-created IAM user with minimal policy. |
 
-**Bootstrap the environment outside of CI/CD:**
+**Bootstrap the environment outside of CI/CD**
 
+Make sure to use a <=10 chracter `--qualifier`:
 ```
 npx cdk bootstrap \
   --toolkit-stack-name CDKToolkit-poll-position \
   --qualifier pollpstn \
   aws://<AWS_ACCOUNT_ID>/<AWS_REGION>
 ```
-See the `cdk.json` for how to reference this:
+Then update the `cdk.json` accordingly:
 
 ```
 {
