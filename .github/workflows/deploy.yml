@@ -17,6 +17,7 @@ jobs:
       AWS_IAM_ARN: ${{ secrets.AWS_IAM_ARN }}
       TOOLKIT_STACK: CDKToolkit-poll-position
       STACK_NAME: PollPositionStack
+      CDK_QUALIFIER: pollpstn
 
     steps:
       - name: Checkout Code
@@ -60,6 +61,5 @@ jobs:
         run: |
           npx cdk deploy \
             --toolkit-stack-name $TOOLKIT_STACK \
-            --context aws:cdk:bootstrap-qualifier=$BOOTSTRAP_QUALIFIER \
             $STACK_NAME \
             --require-approval never
