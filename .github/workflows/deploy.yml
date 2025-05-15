@@ -17,7 +17,7 @@ jobs:
       AWS_IAM_ARN: ${{ secrets.AWS_IAM_ARN }}
       TOOLKIT_STACK: CDKToolkit-poll-position
       STACK_NAME: PollPositionStack
-      CDK_QUALIFIER: pollpstn
+      BOOTSTRAP_QUALIFIER: pollpstn
 
     steps:
       - name: Checkout Code
@@ -56,6 +56,22 @@ jobs:
 
       - name: List CDK Stacks (for debug)
         run: npx cdk ls
+
+      - name: Validate CDK Bootstrap Qualifier
+        run: |
+          ACTUAL_QUALIFIER=$(aws cloudformation describe-stacks \
+            --stack-name $TOOLKIT_STACK \
+            --region $AWS_REGION \
+            --query "Stacks[0].Parameters[?ParameterKey=='Qualifier'].ParameterValue" \
+            --output text)
+
+          echo "✅ Found bootstrap qualifier: $ACTUAL_QUALIFIER"
+
+          if [ "$ACTUAL_QUALIFIER" != "$BOOTSTRAP_QUALIFIER" ]; then
+            echo "❌ Mismatch: expected '$BOOTSTRAP_QUALIFIER' but found '$ACTUAL_QUALIFIER'"
+            exit 1
+          fi
+
 
       - name: Deploy CDK Stack
         run: |
