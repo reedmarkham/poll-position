@@ -76,7 +76,7 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y jq
           ACTUAL=$(jq -r '.app' cdk.json)
-          EXPECTED="npx ts-node bin/poll-position.ts"
+          EXPECTED="npx ts-node --prefer-ts-exts bin/poll-position.ts"
 
           if [[ "$ACTUAL" != "$EXPECTED" ]]; then
             echo "❌ Error: cdk.json 'app' is misconfigured."
@@ -86,7 +86,6 @@ jobs:
           else
             echo "✅ cdk.json app configuration is correct."
           fi
-
 
       - name: Deploy CDK Stack
         run: |
