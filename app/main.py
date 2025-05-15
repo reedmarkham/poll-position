@@ -45,7 +45,7 @@ def fetch_and_upload_data(endpoint: str, params: Dict[str, Any], s3_key_prefix: 
     s3_key: str = f"raw/{s3_key_prefix}_{timestamp}.json"
 
     # Upload data to S3
-    s3.put_object(Bucket=BUCKET, Key=s3_key, Body=str(data))
+    s3.put_object(Bucket=BUCKET, Key=s3_key, Body=json.dumps(data))
 
     print(f"Data successfully uploaded to s3://{BUCKET}/raw/{s3_key}")
 
