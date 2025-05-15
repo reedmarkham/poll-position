@@ -42,12 +42,12 @@ def fetch_and_upload_data(endpoint: str, params: Dict[str, Any], s3_key_prefix: 
     data = response.json()
 
     # Generate a unique S3 key
-    s3_key: str = f"raw/{s3_key_prefix}_{timestamp}.json"
+    s3_key: str = f"{s3_key_prefix}_{timestamp}.json"
 
     # Upload data to S3
     s3.put_object(Bucket=BUCKET, Key=s3_key, Body=json.dumps(data))
 
-    print(f"Data successfully uploaded to s3://{BUCKET}/raw/{s3_key}")
+    print(f"Data successfully uploaded to s3://{BUCKET}/{s3_key}")
 
 def get_latest_s3_key(prefix: str) -> str:
     """Get the latest S3 key for a given prefix."""
