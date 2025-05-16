@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import boto3
 import os
 import json
@@ -9,6 +10,16 @@ s3 = boto3.client("s3", region_name="us-east-1")
 BUCKET = os.getenv("S3_BUCKET")
 PREFIX = "cleansed/poll_"
 SUFFIX = ".json"
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+    "http://pollpo-pollp-2ndyfzh7dezn-2006059404.us-east-1.elb.amazonaws.com"
+    ],  
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def root():
