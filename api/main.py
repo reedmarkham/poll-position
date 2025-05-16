@@ -45,12 +45,17 @@ def latest_poll():
             return raw_data
 
         columns = raw_data["columns"]
-        num_rows = min(len(col["values"]) for col in columns)
-        rows = [
-            {col["name"]: col["values"][i] for col in columns if i < len(col["values"])}
-            for i in range(num_rows)
-        ]
+        num_rows = max(len(col["values"]) for col in columns)
 
+        rows = []
+        for i in range(num_rows):
+            row = {}
+            for col in columns:
+                name = col["name"]
+                values = col["values"]
+                row[name] = values[i] if i < len(values) else None
+            rows.append(row)
+        
         return rows
 
     except Exception as e:
