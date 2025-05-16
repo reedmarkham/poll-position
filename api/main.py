@@ -10,6 +10,10 @@ BUCKET = os.getenv("S3_BUCKET")
 PREFIX = "cleansed/poll_"
 SUFFIX = ".json"
 
+@app.get("/")
+def root():
+    return {"status": "ok"}
+
 @app.get("/api/latest-poll")
 def latest_poll():
     if not BUCKET:
