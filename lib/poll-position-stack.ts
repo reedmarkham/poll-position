@@ -123,6 +123,7 @@ export class PollPositionStack extends cdk.Stack {
       environment: {
         S3_BUCKET: bucket.bucketName,
       },
+      portMappings: [{ containerPort: 80 }],
     });
 
     new ecsPatterns.ApplicationLoadBalancedFargateService(this, 'PollPositionAPIService', {
