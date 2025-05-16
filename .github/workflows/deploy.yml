@@ -18,6 +18,7 @@ jobs:
       TOOLKIT_STACK: CDKToolkit-poll-position
       STACK_NAME: PollPositionStack
       BOOTSTRAP_QUALIFIER: pollpstn
+      BUILD_TIMESTAMP: ${{ github.run_id }}-${{ github.run_number }}
 
     steps:
       - name: Checkout Code

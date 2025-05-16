@@ -122,6 +122,7 @@ export class PollPositionStack extends cdk.Stack {
       }),
       environment: {
         S3_BUCKET: bucket.bucketName,
+        BUILD_TIMESTAMP: new Date().toISOString(), // ✅ triggers task def change
       },
       portMappings: [{ containerPort: 80 }],
     });
