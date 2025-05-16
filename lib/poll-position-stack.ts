@@ -1,3 +1,4 @@
+
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
@@ -20,20 +21,17 @@ export class PollPositionStack extends cdk.Stack {
     const vpc = new ec2.Vpc(this, 'PollPositionVpc', { maxAzs: 2 });
     const cluster = new ecs.Cluster(this, 'PollPositionCluster', { vpc });
     const cfbSecret = secretsmanager.Secret.fromSecretNameV2(this, 'CfbApiKeySecret', 'CFB_API_KEY');
-    
+
     const taskRole = new iam.Role(this, 'PollPositionTaskRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
     });
 
-    // Grant the IAM user permissions to assume the task role
     const iamUserArn = process.env.AWS_IAM_ARN;
     if (!iamUserArn) {
       throw new Error('Environment variable AWS_IAM_ARN is not defined');
     }
     const iamUser = iam.User.fromUserArn(this, 'PollPositionIamUser', iamUserArn);
-
     taskRole.grantAssumeRole(iamUser);
-
     cfbSecret.grantRead(taskRole);
 
     const logGroup = new logs.LogGroup(this, 'PollPositionLogGroup');
@@ -54,8 +52,8 @@ export class PollPositionStack extends cdk.Stack {
     }));
 
     const taskDef = new ecs.FargateTaskDefinition(this, 'PollPositionTaskDef', {
-      memoryLimitMiB: 512, // Minimum for 256 CPU
-      cpu: 256,            // Minimum allowed
+      memoryLimitMiB: 512,
+      cpu: 256,
       taskRole,
       executionRole,
     });
@@ -65,16 +63,13 @@ export class PollPositionStack extends cdk.Stack {
       throw new Error('Environment variable S3_BUCKET is not defined');
     }
 
-    // Create the S3 bucket
     const bucket = new s3.Bucket(this, 'PollPositionBucket', {
       bucketName: s3BucketName,
-      removalPolicy: cdk.RemovalPolicy.DESTROY, // Automatically delete the bucket when the stack is destroyed
-      autoDeleteObjects: true, // Automatically delete objects in the bucket when the bucket is deleted
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
     });
 
-    // Grant read, write, and list permissions to the task role
     bucket.grantReadWrite(taskRole);
-    bucket.grantRead(taskRole); // Optional, included in grantReadWrite
     taskRole.addToPolicy(new iam.PolicyStatement({
       actions: ["s3:ListBucket"],
       resources: [bucket.bucketArn],
@@ -87,7 +82,7 @@ export class PollPositionStack extends cdk.Stack {
         logGroup,
       }),
       environment: {
-        S3_BUCKET: bucket.bucketName, // Dynamically set the S3_BUCKET environment variable
+        S3_BUCKET: bucket.bucketName,
       },
       secrets: {
         CFB_API_KEY: ecs.Secret.fromSecretsManager(cfbSecret, 'CFB_API_KEY'),
@@ -105,11 +100,37 @@ export class PollPositionStack extends cdk.Stack {
     });
 
     new cdk.CfnOutput(this, 'AdHocTaskCommand', {
-      value: `aws ecs run-task \\
-        --cluster ${cluster.clusterName} \\
-        --launch-type FARGATE \\
-        --network-configuration "awsvpcConfiguration={subnets=[${vpc.publicSubnets[0].subnetId}],securityGroups=[],assignPublicIp=ENABLED}" \\
+      value: `aws ecs run-task \
+        --cluster ${cluster.clusterName} \
+        --launch-type FARGATE \
+        --network-configuration "awsvpcConfiguration={subnets=[${vpc.publicSubnets[0].subnetId}],securityGroups=[],assignPublicIp=ENABLED}" \
         --task-definition ${taskDef.taskDefinitionArn}`,
+    });
+
+    const fastApiTaskDef = new ecs.FargateTaskDefinition(this, 'FastApiTaskDef', {
+      memoryLimitMiB: 512,
+      cpu: 256,
+      executionRole,
+      taskRole,
+    });
+
+    fastApiTaskDef.addContainer('FastApiContainer', {
+      image: ecs.ContainerImage.fromRegistry(`${cdk.Aws.ACCOUNT_ID}.dkr.ecr.${cdk.Aws.REGION}.amazonaws.com/poll-position-api:latest`),
+      logging: ecs.LogDriver.awsLogs({
+        streamPrefix: 'poll-position-api',
+        logGroup,
+      }),
+      environment: {
+        S3_BUCKET: bucket.bucketName,
+      },
+    });
+
+    new ecsPatterns.ApplicationLoadBalancedFargateService(this, 'PollPositionAPIService', {
+      cluster,
+      desiredCount: 1,
+      taskDefinition: fastApiTaskDef,
+      publicLoadBalancer: true,
+      listenerPort: 80,
     });
   }
 }

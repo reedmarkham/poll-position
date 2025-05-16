@@ -40,30 +40,29 @@ jobs:
 
       - name: Authenticate Docker with ECR
         run: |
-          aws ecr get-login-password --region $AWS_REGION | \
-          docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+          aws ecr get-login-password --region $AWS_REGION |           docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
-      - name: Ensure ECR Repository Exists
+      - name: Ensure ECR Repositories Exist
         run: |
-          aws ecr describe-repositories --repository-names poll-position --region $AWS_REGION || \
-          aws ecr create-repository --repository-name poll-position --region $AWS_REGION
+          aws ecr describe-repositories --repository-names poll-position --region $AWS_REGION ||           aws ecr create-repository --repository-name poll-position --region $AWS_REGION
+          aws ecr describe-repositories --repository-names poll-position-api --region $AWS_REGION ||           aws ecr create-repository --repository-name poll-position-api --region $AWS_REGION
 
-      - name: Build and Push Docker Image
+      - name: Build and Push Docker Images
         run: |
           docker build -t poll-position -f app/Dockerfile app
           docker tag poll-position:latest ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position:latest
           docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position:latest
+
+          docker build -t poll-position-api -f api/Dockerfile api
+          docker tag poll-position-api:latest ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-api:latest
+          docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-api:latest
 
       - name: List CDK Stacks (for debug)
         run: npx cdk ls
 
       - name: Validate CDK Bootstrap Qualifier
         run: |
-          ACTUAL_QUALIFIER=$(aws cloudformation describe-stacks \
-            --stack-name $TOOLKIT_STACK \
-            --region $AWS_REGION \
-            --query "Stacks[0].Parameters[?ParameterKey=='Qualifier'].ParameterValue" \
-            --output text)
+          ACTUAL_QUALIFIER=$(aws cloudformation describe-stacks             --stack-name $TOOLKIT_STACK             --region $AWS_REGION             --query "Stacks[0].Parameters[?ParameterKey=='Qualifier'].ParameterValue"             --output text)
 
           echo "✅ Found bootstrap qualifier: $ACTUAL_QUALIFIER"
 
@@ -89,9 +88,4 @@ jobs:
 
       - name: Deploy CDK Stack
         run: |
-          npx cdk deploy \
-            --toolkit-stack-name $TOOLKIT_STACK \
-            --context bootstrapQualifier=$BOOTSTRAP_QUALIFIER \
-            $STACK_NAME \
-            --outputs-file cdk-outputs.json \
-            --require-approval never
+          npx cdk deploy             --toolkit-stack-name $TOOLKIT_STACK             --context bootstrapQualifier=$BOOTSTRAP_QUALIFIER             $STACK_NAME             --outputs-file cdk-outputs.json             --require-approval never
