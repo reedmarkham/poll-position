@@ -16,10 +16,21 @@ export class PollPositionStack extends cdk.Stack {
       synthesizer: new cdk.DefaultStackSynthesizer({
         qualifier: 'pollpstn',
       }),
+      tags: {
+        Project: 'poll-position',
+        Environment: 'production',
+        CostCenter: 'sports-analytics',
+        Owner: 'poll-position-team',
+        Application: 'college-football-polling',
+      },
     });
 
     const vpc = new ec2.Vpc(this, 'PollPositionVpc', { maxAzs: 2 });
+    cdk.Tags.of(vpc).add('Name', 'poll-position-vpc');
+    cdk.Tags.of(vpc).add('Component', 'networking');
     const cluster = new ecs.Cluster(this, 'PollPositionCluster', { vpc });
+    cdk.Tags.of(cluster).add('Name', 'poll-position-cluster');
+    cdk.Tags.of(cluster).add('Component', 'compute');
     const cfbSecret = secretsmanager.Secret.fromSecretNameV2(this, 'CfbApiKeySecret', 'CFB_API_KEY');
 
     const taskRole = new iam.Role(this, 'PollPositionTaskRole', {
@@ -35,6 +46,8 @@ export class PollPositionStack extends cdk.Stack {
     cfbSecret.grantRead(taskRole);
 
     const logGroup = new logs.LogGroup(this, 'PollPositionLogGroup');
+    cdk.Tags.of(logGroup).add('Name', 'poll-position-logs');
+    cdk.Tags.of(logGroup).add('Component', 'logging');
 
     const executionRole = new iam.Role(this, 'PollPositionExecutionRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
@@ -52,11 +65,14 @@ export class PollPositionStack extends cdk.Stack {
     }));
 
     const taskDef = new ecs.FargateTaskDefinition(this, 'PollPositionTaskDef', {
-      memoryLimitMiB: 512,
-      cpu: 256,
+      memoryLimitMiB: 256,
+      cpu: 128,
       taskRole,
       executionRole,
     });
+    cdk.Tags.of(taskDef).add('Name', 'poll-position-scheduled-task');
+    cdk.Tags.of(taskDef).add('Component', 'compute');
+    cdk.Tags.of(taskDef).add('TaskType', 'scheduled');
 
     const s3BucketName = process.env.S3_BUCKET;
     if (!s3BucketName) {
@@ -68,6 +84,8 @@ export class PollPositionStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
+    cdk.Tags.of(bucket).add('Name', 'poll-position-data-bucket');
+    cdk.Tags.of(bucket).add('Component', 'storage');
 
     bucket.grantReadWrite(taskRole);
     taskRole.addToPolicy(new iam.PolicyStatement({
@@ -113,6 +131,9 @@ export class PollPositionStack extends cdk.Stack {
       executionRole,
       taskRole,
     });
+    cdk.Tags.of(fastApiTaskDef).add('Name', 'poll-position-api-task');
+    cdk.Tags.of(fastApiTaskDef).add('Component', 'compute');
+    cdk.Tags.of(fastApiTaskDef).add('TaskType', 'api');
 
     fastApiTaskDef.addContainer('FastApiContainer', {
       image: ecs.ContainerImage.fromRegistry(`${cdk.Aws.ACCOUNT_ID}.dkr.ecr.${cdk.Aws.REGION}.amazonaws.com/poll-position-api:latest`),
