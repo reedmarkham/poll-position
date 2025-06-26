@@ -25,7 +25,17 @@ export class PollPositionStack extends cdk.Stack {
       },
     });
 
-    const vpc = new ec2.Vpc(this, 'PollPositionVpc', { maxAzs: 2 });
+    const vpc = new ec2.Vpc(this, 'PollPositionVpc', { 
+      maxAzs: 2,
+      natGateways: 0,
+      subnetConfiguration: [
+        {
+          name: 'Public',
+          subnetType: ec2.SubnetType.PUBLIC,
+          cidrMask: 24,
+        },
+      ],
+    });
     cdk.Tags.of(vpc).add('Name', 'poll-position-vpc');
     cdk.Tags.of(vpc).add('Component', 'networking');
     const cluster = new ecs.Cluster(this, 'PollPositionCluster', { vpc });
@@ -86,9 +96,24 @@ export class PollPositionStack extends cdk.Stack {
       bucketName: s3BucketName,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
-      intelligentTieringConfigurations: [
+      lifecycleRules: [
         {
-          name: 'EntireBucket',
+          id: 'IntelligentTieringRule',
+          enabled: true,
+          transitions: [
+            {
+              storageClass: s3.StorageClass.INTELLIGENT_TIERING,
+              transitionAfter: cdk.Duration.days(0),
+            },
+            {
+              storageClass: s3.StorageClass.GLACIER_INSTANT_RETRIEVAL,
+              transitionAfter: cdk.Duration.days(90),
+            },
+            {
+              storageClass: s3.StorageClass.DEEP_ARCHIVE,
+              transitionAfter: cdk.Duration.days(180),
+            },
+          ],
         },
       ],
     });
