@@ -181,12 +181,29 @@ export class PollPositionStack extends cdk.Stack {
       portMappings: [{ containerPort: 80 }],
     });
 
-    new ecsPatterns.ApplicationLoadBalancedFargateService(this, 'PollPositionAPIService', {
+    const apiService = new ecsPatterns.ApplicationLoadBalancedFargateService(this, 'PollPositionAPIService', {
       cluster,
       desiredCount: 1,
       taskDefinition: fastApiTaskDef,
       publicLoadBalancer: true,
       listenerPort: 80,
+      healthCheckGracePeriod: cdk.Duration.seconds(60),
     });
+
+    // Configure health check settings
+    apiService.targetGroup.configureHealthCheck({
+      path: '/health',
+      interval: cdk.Duration.seconds(30),
+      timeout: cdk.Duration.seconds(5),
+      healthyThresholdCount: 2,
+      unhealthyThresholdCount: 3,
+    });
+
+    // Set deployment configuration
+    const cfnService = apiService.service.node.defaultChild as ecs.CfnService;
+    cfnService.deploymentConfiguration = {
+      minimumHealthyPercent: 50,
+      maximumPercent: 200,
+    };
   }
 }

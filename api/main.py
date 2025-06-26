@@ -25,6 +25,10 @@ app.add_middleware(
 def root():
     return {"status": "ok"}
 
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
+
 @app.get("/api/latest-poll")
 def latest_poll():
     try:
