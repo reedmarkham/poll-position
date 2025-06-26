@@ -115,7 +115,7 @@ export class PollPositionStack extends cdk.Stack {
       },
     });
 
-    const scheduledTask = new ecsPatterns.ScheduledFargateTask(this, 'ScheduledPollPositionTask', {
+    new ecsPatterns.ScheduledFargateTask(this, 'ScheduledPollPositionTask', {
       cluster,
       scheduledFargateTaskDefinitionOptions: {
         taskDefinition: taskDef,
@@ -124,17 +124,6 @@ export class PollPositionStack extends cdk.Stack {
       subnetSelection: { subnetType: ec2.SubnetType.PUBLIC },
       platformVersion: ecs.FargatePlatformVersion.LATEST,
     });
-
-    // Enable Fargate Spot for cost savings (~70% reduction)
-    const cfnService = scheduledTask.node.findChild('ScheduledTaskDef') as ecs.CfnService;
-    if (cfnService) {
-      cfnService.addPropertyOverride('CapacityProviderStrategy', [
-        {
-          CapacityProvider: 'FARGATE_SPOT',
-          Weight: 1,
-        },
-      ]);
-    }
 
     new cdk.CfnOutput(this, 'AdHocTaskCommand', {
       value: `aws ecs run-task \
