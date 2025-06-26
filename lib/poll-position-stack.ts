@@ -45,7 +45,10 @@ export class PollPositionStack extends cdk.Stack {
     taskRole.grantAssumeRole(iamUser);
     cfbSecret.grantRead(taskRole);
 
-    const logGroup = new logs.LogGroup(this, 'PollPositionLogGroup');
+    const logGroup = new logs.LogGroup(this, 'PollPositionLogGroup', {
+      retention: logs.RetentionDays.ONE_MONTH,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
     cdk.Tags.of(logGroup).add('Name', 'poll-position-logs');
     cdk.Tags.of(logGroup).add('Component', 'logging');
 
@@ -65,8 +68,8 @@ export class PollPositionStack extends cdk.Stack {
     }));
 
     const taskDef = new ecs.FargateTaskDefinition(this, 'PollPositionTaskDef', {
-      memoryLimitMiB: 256,
-      cpu: 128,
+      memoryLimitMiB: 512,
+      cpu: 256,
       taskRole,
       executionRole,
     });
@@ -83,6 +86,11 @@ export class PollPositionStack extends cdk.Stack {
       bucketName: s3BucketName,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
+      intelligentTieringConfigurations: [
+        {
+          name: 'EntireBucket',
+        },
+      ],
     });
     cdk.Tags.of(bucket).add('Name', 'poll-position-data-bucket');
     cdk.Tags.of(bucket).add('Component', 'storage');
@@ -107,7 +115,7 @@ export class PollPositionStack extends cdk.Stack {
       },
     });
 
-    new ecsPatterns.ScheduledFargateTask(this, 'ScheduledPollPositionTask', {
+    const scheduledTask = new ecsPatterns.ScheduledFargateTask(this, 'ScheduledPollPositionTask', {
       cluster,
       scheduledFargateTaskDefinitionOptions: {
         taskDefinition: taskDef,
@@ -116,6 +124,17 @@ export class PollPositionStack extends cdk.Stack {
       subnetSelection: { subnetType: ec2.SubnetType.PUBLIC },
       platformVersion: ecs.FargatePlatformVersion.LATEST,
     });
+
+    // Enable Fargate Spot for cost savings (~70% reduction)
+    const cfnService = scheduledTask.node.findChild('ScheduledTaskDef') as ecs.CfnService;
+    if (cfnService) {
+      cfnService.addPropertyOverride('CapacityProviderStrategy', [
+        {
+          CapacityProvider: 'FARGATE_SPOT',
+          Weight: 1,
+        },
+      ]);
+    }
 
     new cdk.CfnOutput(this, 'AdHocTaskCommand', {
       value: `aws ecs run-task \
