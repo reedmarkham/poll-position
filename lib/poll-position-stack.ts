@@ -32,7 +32,7 @@ export class PollPositionStack extends cdk.Stack {
         {
           name: 'Public',
           subnetType: ec2.SubnetType.PUBLIC,
-          cidrMask: 24,
+          cidrMask: 18,
         },
       ],
     });
