@@ -3,6 +3,7 @@ import os, json
 import boto3
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
 
 app = FastAPI()
 s3 = boto3.client("s3", region_name="us-east-1")
@@ -62,3 +63,6 @@ def latest_poll():
         import traceback
         traceback.print_exc()
         return {"error": str(e)}
+
+# Lambda handler
+handler = Mangum(app)

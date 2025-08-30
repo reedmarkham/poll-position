@@ -35,6 +35,8 @@ import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Secret as SecretsManagerSecret } from 'aws-cdk-lib/aws-secretsmanager';
 import { Role, ServicePrincipal, PolicyStatement, User } from 'aws-cdk-lib/aws-iam';
 import { Bucket, StorageClass } from 'aws-cdk-lib/aws-s3';
+import { Function, Runtime, Code } from 'aws-cdk-lib/aws-lambda';
+import { RestApi, LambdaIntegration } from 'aws-cdk-lib/aws-apigateway';
 
 export class PollPositionStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -195,60 +197,57 @@ export class PollPositionStack extends Stack {
         --task-definition ${taskDef.taskDefinitionArn}`,
     });
 
-    const fastApiTaskDef = new FargateTaskDefinition(this, 'FastApiTaskDef', {
-      memoryLimitMiB: 512,
-      cpu: 256,
-      executionRole,
-      taskRole,
-    });
-    Tags.of(fastApiTaskDef).add('Name', 'poll-position-api-task');
-    Tags.of(fastApiTaskDef).add('Component', 'compute');
-    Tags.of(fastApiTaskDef).add('TaskType', 'api');
-
-    fastApiTaskDef.addContainer('FastApiContainer', {
-      image: ContainerImage.fromRegistry(`${Aws.ACCOUNT_ID}.dkr.ecr.${Aws.REGION}.amazonaws.com/poll-position-api:latest`),
-      logging: LogDriver.awsLogs({
-        streamPrefix: 'poll-position-api',
-        logGroup,
-      }),
+    // Lambda function for API
+    const apiLambda = new Function(this, 'PollPositionAPILambda', {
+      runtime: Runtime.PYTHON_3_11,
+      handler: 'main.handler',
+      code: Code.fromAsset('services/api'),
       environment: {
         S3_BUCKET: bucket.bucketName,
-        BUILD_TIMESTAMP: new Date().toISOString(), // ✅ triggers task def change
         UI_URL: `http://${Fn.importValue('PollPositionUILoadBalancerURL')}`,
       },
-      portMappings: [{ containerPort: 80 }],
+      timeout: Duration.seconds(30),
+      memorySize: 512,
+      role: taskRole,
+      logGroup: new LogGroup(this, 'APILambdaLogGroup', {
+        logGroupName: '/aws/lambda/poll-position-api',
+        retention: RetentionDays.ONE_WEEK,
+        removalPolicy: RemovalPolicy.DESTROY,
+      }),
     });
 
-    const apiService = new ApplicationLoadBalancedFargateService(this, 'PollPositionAPIService', {
-      cluster,
-      desiredCount: 1,
-      taskDefinition: fastApiTaskDef,
-      publicLoadBalancer: true,
-      listenerPort: 80,
-      healthCheckGracePeriod: Duration.seconds(60),
+    Tags.of(apiLambda).add('Name', 'poll-position-api-lambda');
+    Tags.of(apiLambda).add('Component', 'compute');
+    Tags.of(apiLambda).add('TaskType', 'api');
+
+    // API Gateway
+    const api = new RestApi(this, 'PollPositionAPI', {
+      restApiName: 'Poll Position API',
+      description: 'API for Poll Position application',
+      defaultCorsPreflightOptions: {
+        allowOrigins: [`http://${Fn.importValue('PollPositionUILoadBalancerURL')}`],
+        allowMethods: ['GET', 'POST', 'OPTIONS'],
+        allowHeaders: ['Content-Type', 'X-Amz-Date', 'Authorization', 'X-Api-Key'],
+      },
     });
 
-    // Configure health check settings
-    apiService.targetGroup.configureHealthCheck({
-      path: '/health',
-      interval: Duration.seconds(30),
-      timeout: Duration.seconds(5),
-      healthyThresholdCount: 2,
-      unhealthyThresholdCount: 3,
-    });
+    // Lambda integration
+    const integration = new LambdaIntegration(apiLambda);
+    
+    // Add routes
+    api.root.addMethod('GET', integration); // For health check
+    const healthResource = api.root.addResource('health');
+    healthResource.addMethod('GET', integration);
+    
+    const apiResource = api.root.addResource('api');
+    const latestPollResource = apiResource.addResource('latest-poll');
+    latestPollResource.addMethod('GET', integration);
 
-    // Set deployment configuration
-    const cfnService = apiService.service.node.defaultChild as CfnService;
-    cfnService.deploymentConfiguration = {
-      minimumHealthyPercent: 50,
-      maximumPercent: 200,
-    };
-
-    // Output the API ELB URL for use by other services
-    new CfnOutput(this, 'APILoadBalancerURL', {
-      value: apiService.loadBalancer.loadBalancerDnsName,
-      description: 'URL of the API Load Balancer',
-      exportName: 'PollPositionAPILoadBalancerURL',
+    // Output the API Gateway URL for use by other services
+    new CfnOutput(this, 'APIGatewayURL', {
+      value: api.url,
+      description: 'URL of the API Gateway',
+      exportName: 'PollPositionAPIGatewayURL',
     });
   }
 }

@@ -1,31 +1,54 @@
-# 🏈 poll-position
+# poll-position
 
-This project uses AWS CDK to deploy an AWS Fargate task, S3 bucket, and other requisite infrastructure to ingest raw data from CollegeFootballData API to S3 using a containerized process. 
+A monorepo for college football polling data ingestion, API, and visualization built on AWS infrastructure.
 
-It also produces a "cleansed" JSON merging the raw files using `polars` to be used downstream in a dashboard app that visualizes the college football rankings alongside other team metadata.
+The system ingests data from the CollegeFootballData API, processes it with parallel JSON parsing using Python's `concurrent.futures`, and serves both raw and cleansed data through a serverless API and interactive visualization dashboard.
 
-Parsing the deeply-nested raw JSON files is done in parallelized fashion using Python's standard library `concurrent.futures`.
+## Architecture
 
-## Folder Structure
+**Services-based monorepo** with individual packages for each component:
 
 ```
 poll-position/
-├── .github/
-│   └── workflows/
-│       └── deploy.yml              # GitHub Actions workflow for CI/CD
-├── bin/
-│   └── poll-position.ts            # CDK entrypoint
-├── lib/
-│   └── poll-position-stack.ts      # CDK stack definition (S3, VPC, ECS, Fargate, Logs, Secrets, etc.)
-├── app/
-│   ├── main.py                     # Python app to get raw data from API and upload to S3
-│   ├── Dockerfile                  # Dockerfile for containerizing the app
-│   └── requirements.txt            # Python dependencies for the app
-├── package.json                    # NPM dependencies for CDK
-├── tsconfig.json                   # TypeScript configuration
-├── cdk.json                        # CDK app configuration
-└── cdk.context.json                # CDK context for environment-specific configurations (auto-generated)
+├── services/
+│   ├── infrastructure/         # AWS CDK stacks for deployment
+│   ├── ingest/                 # Data ingestion from CollegeFootballData API  
+│   ├── api/                    # FastAPI backend with Lambda + API Gateway
+│   └── ui/                     # Frontend visualization dashboard
+├── .github/workflows/          # CI/CD automation
+└── package.json                # Root workspace configuration
 ```
+
+## Service Overview
+
+### Infrastructure
+AWS CDK TypeScript stacks managing:
+- S3 storage for raw and processed data
+- Lambda functions for serverless API
+- ECS Fargate for scheduled data ingestion
+- API Gateway for HTTP endpoints
+- VPC networking and security
+
+### Ingest Service
+Python application that:
+- Fetches raw polling data from CollegeFootballData API
+- Processes deeply-nested JSON with parallel parsing
+- Uploads cleansed data to S3 for downstream consumption
+- Runs on scheduled ECS Fargate tasks
+
+### API Service
+FastAPI application providing:
+- RESTful endpoints for polling data access
+- Serverless Lambda deployment for cost efficiency
+- S3 integration for data retrieval
+- CORS configuration for frontend integration
+
+### UI Service  
+Vite-based frontend featuring:
+- Interactive D3.js visualizations of poll rankings
+- Real-time data loading from API endpoints
+- Responsive design for college football analytics
+- Containerized deployment on ECS Fargate
 
 ## Prerequisites
 
@@ -105,32 +128,40 @@ Then update the `cdk.json` accordingly:
 }
 ```
 
-## CI/CD
+## CI/CD Pipeline
 
-On every commit to the `main` branch, the following steps are automatically performed:
+GitHub Actions workflow automatically handles:
 
-1. Install dependencies.
-2. Build and push the Docker image to Amazon ECR.
-3. Deploy the CDK stack.
+### Build Process
+- **Workspace Dependencies**: Install npm workspace dependencies
+- **Service Building**: Build all services in parallel
+- **Container Images**: Build and push Docker images for ingest and UI services
+- **Lambda Packaging**: Package API service for Lambda deployment
+
+### Deployment Process  
+- **Infrastructure**: Deploy CDK stacks for main application and UI
+- **API Gateway**: Deploy serverless API endpoints
+- **ECS Services**: Deploy containerized ingest and visualization services
+- **Cross-service Integration**: Configure service discovery via CDK outputs
 
 ### Execution
 
-Ensure the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) is installed and configured with credentials that have sufficient permissions.
+The ingest service runs automatically every Monday at 12:00 PM UTC via ECS scheduled tasks. Manual execution available through AWS CLI or console using the provided CloudFormation outputs.
 
-After deployment, you'll see a `CfnOutput` that prints a full `aws ecs run-task` CLI command. Use this to run the ECS task on demand.
-
-Example:
+## Development
 
 ```bash
-aws ecs run-task \
-  --cluster YOUR_CLUSTER_NAME \
-  --launch-type FARGATE \
-  --network-configuration "awsvpcConfiguration={subnets=[subnet-abc123],securityGroups=[],assignPublicIp=ENABLED}" \
-  --task-definition YOUR_TASK_DEF_ARN
+# Install dependencies
+npm install
+
+# Build specific service
+npm run build:api
+npm run build:infrastructure  
+npm run build:ui
+
+# Deploy infrastructure
+npm run deploy
+
+# Run UI development server
+npm run dev:ui
 ```
-
-Alternatively, use the AWS console to find the task and trigger it in the UI.
-
-## Scheduled Execution
-
-The task is configured to run automatically every Monday at 12:00 PM UTC (8:00 AM ET).
