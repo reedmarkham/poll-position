@@ -25,17 +25,11 @@ export class PollPositionUIStack extends Stack {
     });
 
     const commonTags = {
-      Project: 'poll-position-ui',
-      Environment: process.env.ENVIRONMENT ?? 'development',
-      Owner: 'poll-position-team',
-      CostCenter: 'engineering',
+      Project: 'poll-position',
       Application: 'poll-position-ui',
     };
 
     Tags.of(this).add('Project', commonTags.Project);
-    Tags.of(this).add('Environment', commonTags.Environment);
-    Tags.of(this).add('Owner', commonTags.Owner);
-    Tags.of(this).add('CostCenter', commonTags.CostCenter);
     Tags.of(this).add('Application', commonTags.Application);
 
     const vpc = new Vpc(this, 'PollPositionUIVpc', {

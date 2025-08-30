@@ -45,10 +45,7 @@ export class PollPositionStack extends Stack {
       }),
       tags: {
         Project: 'poll-position',
-        Environment: 'production',
-        CostCenter: 'sports-analytics',
-        Owner: 'poll-position-team',
-        Application: 'college-football-polling',
+        Application: 'poll-position',
       },
     });
 
