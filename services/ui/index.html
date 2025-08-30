@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico" sizes="48x48">
+  <title>poll-position</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #111;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    #app {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem 0;
+    }
+
+    #visualization-container {
+      width: 1400px;
+      height: 800px;
+      margin: 0 auto;
+    }
+
+    svg {
+      display: block;
+      background: transparent;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.9rem;
+      color: #888;
+    }
+
+    footer a {
+      color: inherit;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <header style="text-align:center; padding-top: 1rem;">
+    <h1>🏈 poll-position</h1>
+    <div style="color:#ccc; font-weight: normal; font-size: 1rem;">
+      A d3 app to visualize how the 2024 AP top 25 college football teams ranked by week, as well as their progress towards the final top 12 and playoff eligbility
+    </div>
+  </header>
+
+  <div id="app"></div>
+
+  <script type="module" src="/src/index.ts"></script>
+
+  <footer>
+    💻 <a href="https://github.com/reedmarkham/poll-position">GitHub repo</a>
+    📫 <a href="mailto:reedmarkham@gmail.com">reedmarkham@gmail.com</a>
+  </footer>
+</body>
+</html>

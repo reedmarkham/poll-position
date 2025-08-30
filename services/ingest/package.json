@@ -1,0 +1,12 @@
+{
+  "name": "@poll-position/ingest",
+  "version": "1.0.0",
+  "description": "Poll Position Ingest - Data ingestion service",
+  "scripts": {
+    "dev": "python main.py",
+    "build": "echo 'Ingest build complete'",
+    "docker:build": "docker build -t poll-position-ingest .",
+    "docker:run": "docker run poll-position-ingest"
+  },
+  "main": "main.py"
+}

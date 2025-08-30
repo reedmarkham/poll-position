@@ -1,20 +1,26 @@
 {
   "name": "poll-position",
   "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "services/*"
+  ],
   "scripts": {
-    "build": "tsc",
-    "cdk": "cdk",
-    "deploy": "cdk deploy",
-    "synth": "cdk synth",
-    "watch": "tsc --watch"
-  },
-  "dependencies": {
-    "aws-cdk-lib": "^2.130.0",
-    "constructs": "^10.3.0"
+    "build": "npm run build --workspaces",
+    "build:infrastructure": "npm run build -w services/infrastructure",
+    "build:ui": "npm run build -w services/ui",
+    "build:api": "npm run build -w services/api",
+    "build:ingest": "npm run build -w services/ingest",
+    "dev:ui": "npm run dev -w services/ui",
+    "dev:api": "npm run dev -w services/api",
+    "dev:ingest": "npm run dev -w services/ingest",
+    "cdk": "npm run cdk -w services/infrastructure",
+    "deploy": "npm run deploy -w services/infrastructure",
+    "synth": "npm run synth -w services/infrastructure",
+    "test": "npm run test --workspaces"
   },
   "devDependencies": {
     "@types/node": "^20.8.10",
-    "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   }
 }

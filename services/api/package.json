@@ -1,0 +1,12 @@
+{
+  "name": "@poll-position/api",
+  "version": "1.0.0",
+  "description": "Poll Position API - Backend API service",
+  "scripts": {
+    "dev": "python main.py",
+    "build": "echo 'API build complete'",
+    "docker:build": "docker build -t poll-position-api .",
+    "docker:run": "docker run -p 8000:8000 poll-position-api"
+  },
+  "main": "main.py"
+}

@@ -6,7 +6,7 @@ It also produces a "cleansed" JSON merging the raw files using `polars` to be us
 
 Parsing the deeply-nested raw JSON files is done in parallelized fashion using Python's standard library `concurrent.futures`.
 
-## 📁 Folder Structure
+## Folder Structure
 
 ```
 poll-position/
@@ -27,7 +27,7 @@ poll-position/
 └── cdk.context.json                # CDK context for environment-specific configurations (auto-generated)
 ```
 
-## 🔐 Prerequisites
+## Prerequisites
 
 - The access key for a previously-created (i.e. via console or other stack) AWS IAM user, with a minimal policy like:
 ```

@@ -1,8 +1,8 @@
+import os, json
+
+import boto3
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import boto3
-import os
-import json
 
 app = FastAPI()
 s3 = boto3.client("s3", region_name="us-east-1")
@@ -14,7 +14,7 @@ SUFFIX = ".json"
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-    "http://pollpo-pollp-2ndyfzh7dezn-2006059404.us-east-1.elb.amazonaws.com"
+        os.getenv("UI_URL", "http://localhost:3000")
     ],  
     allow_credentials=True,
     allow_methods=["*"],
@@ -23,7 +23,7 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return {"status": "ok"}
+    return {"status": "healthy"}
 
 @app.get("/health")
 def health():
