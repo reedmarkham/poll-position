@@ -1,4 +1,4 @@
-import * as d3 from 'd3';
+import { select, scaleLinear, axisLeft, axisBottom, line, max, extent, groups, group, format } from 'd3';
 
 export interface RawPollRow {
   week: number;
@@ -18,8 +18,8 @@ interface FlattenedTeamRank {
 }
 
 function normalizeTiedRanks(data: RawPollRow[]): RawPollRow[] {
-  return d3.groups(data, d => d.week).flatMap(([week, rows]) => {
-    const groupedByRank = d3.groups(rows, d => d.rank).sort((a, b) => a[0] - b[0]);
+  return groups(data, d => d.week).flatMap(([week, rows]) => {
+    const groupedByRank = groups(rows, d => d.rank).sort((a, b) => a[0] - b[0]);
     let visualRankCounter = 1;
     return groupedByRank.flatMap(([rank, ties]) => {
       const sorted = ties.sort((a, b) => a.school.localeCompare(b.school));
@@ -38,7 +38,7 @@ function normalizeTiedRanks(data: RawPollRow[]): RawPollRow[] {
 export function renderVisualization(data: RawPollRow[], containerId: string): void {
   const normalized = normalizeTiedRanks(data);
 
-  const groupedByWeek = d3.groups(normalized, d => d.week).map(([week, rows]) => ({
+  const groupedByWeek = groups(normalized, d => d.week).map(([week, rows]) => ({
     week: String(week),
     ranks: rows.map(r => ({
       rank: r.rank,
@@ -53,7 +53,7 @@ export function renderVisualization(data: RawPollRow[], containerId: string): vo
 }
 
 function renderGroupedVisualization(data: { week: string, ranks: any[] }[], containerId: string): void {
-  const container = d3.select(`#${containerId}`);
+  const container = select(`#${containerId}`);
   container.selectAll('*').remove();
 
   const svg = container
@@ -84,14 +84,14 @@ function renderGroupedVisualization(data: { week: string, ranks: any[] }[], cont
       }))
     );
 
-    const finalWeek = d3.max(flattenedData, d => d.week) ?? 0;
+    const finalWeek = max(flattenedData, d => d.week) ?? 0;
     const topSchools = flattenedData
       .filter(d => d.week === finalWeek)
       .sort((a, b) => a.rank - b.rank)
       .slice(0, 12)
       .map(d => d.school);
 
-    const grouped = d3.group(flattenedData, d => d.school);
+    const grouped = group(flattenedData, d => d.school);
     const allTeams = Array.from(grouped.entries()).map(([school, ranks]) => ({
       school,
       ranks: ranks.sort((a, b) => a.week - b.week),
@@ -99,20 +99,19 @@ function renderGroupedVisualization(data: { week: string, ranks: any[] }[], cont
       isTop: topSchools.includes(school),
     }));
 
-    const xScale = d3
-      .scaleLinear()
-      .domain(d3.extent(flattenedData, d => d.week) as [number, number])
+    const xScale = scaleLinear()
+      .domain(extent(flattenedData, d => d.week) as [number, number])
       .range([0, innerWidth]);
 
-    const yMax = d3.max(flattenedData, d => d.visualRank) || 25;
-    const yScale = d3.scaleLinear().domain([1 - 0.5, yMax + 0.5]).range([0, innerHeight]);
+    const yMax = max(flattenedData, d => d.visualRank) || 25;
+    const yScale = scaleLinear().domain([1 - 0.5, yMax + 0.5]).range([0, innerHeight]);
 
     const baseRadius = Math.max(4, width / 120);
     const fontSize = Math.max(8, width / 80);
 
     g.append('g')
       .attr('transform', `translate(0,${innerHeight})`)
-      .call(d3.axisBottom(xScale).ticks(data.length).tickFormat(d3.format('d')));
+      .call(axisBottom(xScale).ticks(data.length).tickFormat(format('d')));
 
     g.append('text')
       .attr('x', innerWidth / 2)
@@ -122,7 +121,7 @@ function renderGroupedVisualization(data: { week: string, ranks: any[] }[], cont
       .attr('fill', '#ccc')
       .text('Week');
 
-    const lineGenerator = d3.line<FlattenedTeamRank>()
+    const lineGenerator = line<FlattenedTeamRank>()
       .defined(d => d.visualRank !== undefined && d.visualRank !== null)
       .x(d => xScale(d.week))
       .y(d => yScale(d.visualRank));

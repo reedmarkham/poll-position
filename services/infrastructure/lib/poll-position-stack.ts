@@ -52,17 +52,17 @@ export class PollPositionStack extends Stack {
     });
 
     const vpc = new Vpc(this, 'PollPositionVpc', { 
+      vpcName: 'poll-position-vpc',
       maxAzs: 2,
       natGateways: 0,
       subnetConfiguration: [
         {
-          name: 'Public',
+          name: 'poll-position-public',
           subnetType: SubnetType.PUBLIC,
           cidrMask: 18,
         },
       ],
     });
-    Tags.of(vpc).add('Name', 'poll-position-vpc');
     Tags.of(vpc).add('Component', 'networking');
 
     // Add VPC Endpoints for ECR connectivity
@@ -77,12 +77,15 @@ export class PollPositionStack extends Stack {
     vpc.addGatewayEndpoint('S3Endpoint', {
       service: GatewayVpcEndpointAwsService.S3,
     });
-    const cluster = new Cluster(this, 'PollPositionCluster', { vpc });
-    Tags.of(cluster).add('Name', 'poll-position-cluster');
+    const cluster = new Cluster(this, 'PollPositionCluster', { 
+      vpc,
+      clusterName: 'poll-position-cluster'
+    });
     Tags.of(cluster).add('Component', 'compute');
     const cfbSecret = SecretsManagerSecret.fromSecretNameV2(this, 'CfbApiKeySecret', 'CFB_API_KEY');
 
     const taskRole = new Role(this, 'PollPositionTaskRole', {
+      roleName: 'poll-position-task-role',
       assumedBy: new ServicePrincipal('ecs-tasks.amazonaws.com'),
     });
 
@@ -95,13 +98,14 @@ export class PollPositionStack extends Stack {
     cfbSecret.grantRead(taskRole);
 
     const logGroup = new LogGroup(this, 'PollPositionLogGroup', {
+      logGroupName: '/ecs/poll-position',
       retention: RetentionDays.ONE_MONTH,
       removalPolicy: RemovalPolicy.DESTROY,
     });
-    Tags.of(logGroup).add('Name', 'poll-position-logs');
     Tags.of(logGroup).add('Component', 'logging');
 
     const executionRole = new Role(this, 'PollPositionExecutionRole', {
+      roleName: 'poll-position-execution-role',
       assumedBy: new ServicePrincipal('ecs-tasks.amazonaws.com'),
     });
     executionRole.addToPolicy(new PolicyStatement({
@@ -117,12 +121,12 @@ export class PollPositionStack extends Stack {
     }));
 
     const taskDef = new FargateTaskDefinition(this, 'PollPositionTaskDef', {
+      family: 'poll-position-ingest-task',
       memoryLimitMiB: 512,
       cpu: 256,
       taskRole,
       executionRole,
     });
-    Tags.of(taskDef).add('Name', 'poll-position-scheduled-task');
     Tags.of(taskDef).add('Component', 'compute');
     Tags.of(taskDef).add('TaskType', 'scheduled');
 
@@ -132,7 +136,7 @@ export class PollPositionStack extends Stack {
     }
 
     const bucket = new Bucket(this, 'PollPositionBucket', {
-      bucketName: s3BucketName,
+      bucketName: s3BucketName, // Already deterministic from env var
       removalPolicy: RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       lifecycleRules: [
@@ -198,34 +202,38 @@ export class PollPositionStack extends Stack {
     });
 
     // Lambda function for API
+    const apiLambdaLogGroup = new LogGroup(this, 'APILambdaLogGroup', {
+      logGroupName: '/aws/lambda/poll-position-api',
+      retention: RetentionDays.ONE_WEEK,
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+
     const apiLambda = new Function(this, 'PollPositionAPILambda', {
-      runtime: Runtime.PYTHON_3_11,
+      functionName: 'poll-position-api',
+      runtime: Runtime.PYTHON_3_10,
       handler: 'main.handler',
       code: Code.fromAsset('services/api'),
       environment: {
         S3_BUCKET: bucket.bucketName,
-        UI_URL: `http://${Fn.importValue('PollPositionUILoadBalancerURL')}`,
+        UI_URL: `http://${Fn.importValue('PollPositionVisualizationLoadBalancerURL')}`,
       },
       timeout: Duration.seconds(30),
       memorySize: 512,
       role: taskRole,
-      logGroup: new LogGroup(this, 'APILambdaLogGroup', {
-        logGroupName: '/aws/lambda/poll-position-api',
-        retention: RetentionDays.ONE_WEEK,
-        removalPolicy: RemovalPolicy.DESTROY,
-      }),
     });
 
-    Tags.of(apiLambda).add('Name', 'poll-position-api-lambda');
     Tags.of(apiLambda).add('Component', 'compute');
     Tags.of(apiLambda).add('TaskType', 'api');
 
     // API Gateway
     const api = new RestApi(this, 'PollPositionAPI', {
-      restApiName: 'Poll Position API',
+      restApiName: 'poll-position-api',
       description: 'API for Poll Position application',
+      deployOptions: {
+        stageName: 'prod',
+      },
       defaultCorsPreflightOptions: {
-        allowOrigins: [`http://${Fn.importValue('PollPositionUILoadBalancerURL')}`],
+        allowOrigins: [`http://${Fn.importValue('PollPositionVisualizationLoadBalancerURL')}`],
         allowMethods: ['GET', 'POST', 'OPTIONS'],
         allowHeaders: ['Content-Type', 'X-Amz-Date', 'Authorization', 'X-Api-Key'],
       },

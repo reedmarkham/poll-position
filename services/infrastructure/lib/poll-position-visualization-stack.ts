@@ -15,7 +15,7 @@ import { ManagedPolicy } from 'aws-cdk-lib/aws-iam';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Schedule } from 'aws-cdk-lib/aws-applicationautoscaling';
 
-export class PollPositionUIStack extends Stack {
+export class PollPositionVisualizationStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, {
       ...props,
@@ -32,7 +32,8 @@ export class PollPositionUIStack extends Stack {
     Tags.of(this).add('Project', commonTags.Project);
     Tags.of(this).add('Application', commonTags.Application);
 
-    const vpc = new Vpc(this, 'PollPositionUIVpc', {
+    const vpc = new Vpc(this, 'PollPositionVisualizationVpc', {
+      vpcName: 'poll-position-visualization-vpc',
       ipAddresses: IpAddresses.cidr('10.1.0.0/16'),
       maxAzs: 2,
       natGateways: 0,
@@ -40,25 +41,28 @@ export class PollPositionUIStack extends Stack {
       subnetConfiguration: [
         {
           cidrMask: 24,
-          name: 'Public',
+          name: 'poll-position-visualization-public',
           subnetType: SubnetType.PUBLIC,
         },
       ],
     });
 
-    const cluster = new Cluster(this, 'PollPositionUICluster', {
-      vpc
+    const cluster = new Cluster(this, 'PollPositionVisualizationCluster', {
+      vpc,
+      clusterName: 'poll-position-visualization-cluster'
     });
 
-    const imageUri = `${process.env.ACCOUNT_ID}.dkr.ecr.${process.env.AWS_REGION}.amazonaws.com/poll-position-ui:latest`;
+    const imageUri = `${process.env.ACCOUNT_ID}.dkr.ecr.${process.env.AWS_REGION}.amazonaws.com/poll-position-visualization:latest`;
 
-    const fargateService = new ApplicationLoadBalancedFargateService(this, 'PollPositionUIService', {
+    const fargateService = new ApplicationLoadBalancedFargateService(this, 'PollPositionVisualizationService', {
       cluster,
+      serviceName: 'poll-position-visualization-service',
       memoryLimitMiB: 512,
       cpu: 256,
       desiredCount: 1,
       publicLoadBalancer: true,
       assignPublicIp: true,
+      loadBalancerName: 'poll-position-visualization-alb',
       capacityProviderStrategies: [
         {
           capacityProvider: 'FARGATE_SPOT',
@@ -139,10 +143,10 @@ export class PollPositionUIStack extends Stack {
     });
 
     // Output the ELB URL for use by the API
-    new CfnOutput(this, 'UILoadBalancerURL', {
+    new CfnOutput(this, 'VisualizationLoadBalancerURL', {
       value: fargateService.loadBalancer.loadBalancerDnsName,
-      description: 'URL of the UI Load Balancer',
-      exportName: 'PollPositionUILoadBalancerURL',
+      description: 'URL of the Visualization Load Balancer',
+      exportName: 'PollPositionVisualizationLoadBalancerURL',
     });
   }
 }

@@ -18,7 +18,7 @@ jobs:
       AWS_IAM_ARN: ${{ secrets.AWS_IAM_ARN }}
       TOOLKIT_STACK: CDKToolkit-poll-position
       STACK_NAME: PollPositionStack
-      UI_STACK_NAME: PollPositionUIStack
+      VISUALIZATION_STACK_NAME: PollPositionVisualizationStack
       BOOTSTRAP_QUALIFIER: pollpstn
       BUILD_TIMESTAMP: ${{ github.run_id }}-${{ github.run_number }}
 
@@ -52,8 +52,8 @@ jobs:
           aws ecr create-repository --repository-name poll-position --region $AWS_REGION
           aws ecr describe-repositories --repository-names poll-position-api --region $AWS_REGION || \
           aws ecr create-repository --repository-name poll-position-api --region $AWS_REGION
-          aws ecr describe-repositories --repository-names poll-position-ui --region $AWS_REGION || \
-          aws ecr create-repository --repository-name poll-position-ui --region $AWS_REGION
+          aws ecr describe-repositories --repository-names poll-position-visualization --region $AWS_REGION || \
+          aws ecr create-repository --repository-name poll-position-visualization --region $AWS_REGION
 
       # --- Backend Services ---
       - name: Build and Push Backend Docker Images
@@ -66,23 +66,23 @@ jobs:
           docker tag poll-position-api:latest ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-api:latest
           docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-api:latest
 
-      # --- Frontend (UI) ---
+      # --- Frontend (Visualization) ---
       - name: Debug API Base URL
         run: echo "🌐 VITE_API_BASE_URL = $VITE_API_BASE_URL"
 
-      - name: Build UI Docker image with env injected
-        working-directory: services/ui
+      - name: Build Visualization Docker image with env injected
+        working-directory: services/visualization
         run: |
           docker build \
             --no-cache \
             --build-arg VITE_API_BASE_URL=$VITE_API_BASE_URL \
-            -t poll-position-ui \
+            -t poll-position-visualization \
             -f Dockerfile .
 
-      - name: Tag and Push UI Docker image to ECR
+      - name: Tag and Push Visualization Docker image to ECR
         run: |
-          docker tag poll-position-ui:latest ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-ui:latest
-          docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-ui:latest
+          docker tag poll-position-visualization:latest ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-visualization:latest
+          docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-visualization:latest
 
       # --- Infrastructure Deployment ---
       - name: List CDK Stacks (for debug)
@@ -130,12 +130,12 @@ jobs:
             --outputs-file cdk-outputs.json \
             --require-approval never
 
-      - name: Deploy UI CDK Stack
+      - name: Deploy Visualization CDK Stack
         working-directory: services/infrastructure
         run: |
           npx cdk deploy \
             --toolkit-stack-name $TOOLKIT_STACK \
             --context bootstrapQualifier=$BOOTSTRAP_QUALIFIER \
-            $UI_STACK_NAME \
-            --outputs-file ui-cdk-outputs.json \
+            $VISUALIZATION_STACK_NAME \
+            --outputs-file visualization-cdk-outputs.json \
             --require-approval never

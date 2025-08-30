@@ -1,5 +1,5 @@
 import { renderVisualization } from './components/visualization';
-import { loadLatestPollData } from './utils/loadS3';
+import { loadLatestPollData } from './utils/load';
 import type { RawPollRow } from './components/visualization'; // reuse the type for clarity
 
 // Create the container first
