@@ -7,16 +7,16 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces",
-    "build:infrastructure": "npm run build -w services/infrastructure",
+    "build:infrastructure": "npm run build -w infrastructure",
     "build:ui": "npm run build -w services/ui",
     "build:api": "npm run build -w services/api",
     "build:ingest": "npm run build -w services/ingest",
     "dev:ui": "npm run dev -w services/ui",
     "dev:api": "npm run dev -w services/api",
     "dev:ingest": "npm run dev -w services/ingest",
-    "cdk": "npm run cdk -w services/infrastructure",
-    "deploy": "npm run deploy -w services/infrastructure",
-    "synth": "npm run synth -w services/infrastructure",
+    "cdk": "npm run cdk -w infrastructure",
+    "deploy": "npm run deploy -w infrastructure",
+    "synth": "npm run synth -w infrastructure",
     "test": "npm run test --workspaces"
   },
   "devDependencies": {

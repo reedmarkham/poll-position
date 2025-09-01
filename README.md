@@ -1,21 +1,22 @@
 # poll-position
 
-The system ingests data from the CollegeFootballData API, processes it, and serves both raw and cleansed data interactive visualization dashboard by way of a simple API both hosted on AWS.
+[![CI/CD Pipeline](https://github.com/reedmarkham/poll-position/actions/workflows/deploy.yml/badge.svg)](https://github.com/reedmarkham/poll-position/actions/workflows/deploy.yml)
 
-**Services directory structure**:
+This project ingests data from the CollegeFootballData API, processes it, and serves both raw and cleansed data to an interactive dashboard by way of a simple API. Everything is hosted on AWS and deployed via CDK and GitHub Actions.
+
+**Directory structure**:
 
 ```
 poll-position/
+├── infrastructure/             # AWS CDK stacks for deployment
+│   ├── bin/
+│   │   └── poll-position.ts       # Main CDK app entry
+│   ├── lib/
+│   │   ├── poll-position-stack.ts     # Main infrastructure (S3, Lambda, ECS)
+│   │   └── poll-position-ui-stack.ts  # UI infrastructure (Fargate, ALB)
+│   ├── package.json            # CDK dependencies
+│   └── tsconfig.json           # TypeScript configuration
 ├── services/
-│   ├── infrastructure/         # AWS CDK stacks for deployment
-│   │   ├── bin/
-│   │   │   ├── poll-position.ts       # Main CDK app entry
-│   │   │   └── poll-position-ui.ts    # UI stack entry
-│   │   ├── lib/
-│   │   │   ├── poll-position-stack.ts     # Main infrastructure (S3, Lambda, ECS)
-│   │   │   └── poll-position-ui-stack.ts  # UI infrastructure (Fargate, ALB)
-│   │   ├── package.json        # CDK dependencies
-│   │   └── tsconfig.json       # TypeScript configuration
 │   ├── ingest/                 # Data ingestion service
 │   │   ├── main.py             # Python ingestion logic
 │   │   ├── Dockerfile          # Container configuration

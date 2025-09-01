@@ -212,7 +212,7 @@ export class PollPositionStack extends Stack {
       functionName: 'poll-position-api',
       runtime: Runtime.PYTHON_3_10,
       handler: 'main.handler',
-      code: Code.fromAsset('../api'),
+      code: Code.fromAsset('services/api'),
       environment: {
         S3_BUCKET: bucket.bucketName,
         UI_URL: `http://${Fn.importValue('PollPositionUILoadBalancerURL')}`,

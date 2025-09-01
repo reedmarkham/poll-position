@@ -15,7 +15,7 @@ on:
       working-directory:
         required: false
         type: string
-        default: 'services/infrastructure'
+        default: 'infrastructure'
         description: 'Working directory for CDK commands'
     secrets:
       AWS_ACCESS_KEY_ID:
