@@ -35,7 +35,7 @@ function normalizeTiedRanks(data: RawPollRow[]): RawPollRow[] {
   });
 }
 
-export function renderVisualization(data: RawPollRow[], containerId: string): void {
+export function renderUI(data: RawPollRow[], containerId: string): void {
   const normalized = normalizeTiedRanks(data);
 
   const groupedByWeek = groups(normalized, d => d.week).map(([week, rows]) => ({
@@ -49,10 +49,10 @@ export function renderVisualization(data: RawPollRow[], containerId: string): vo
     })),
   }));
 
-  renderGroupedVisualization(groupedByWeek, containerId);
+  renderGroupedUI(groupedByWeek, containerId);
 }
 
-function renderGroupedVisualization(data: { week: string, ranks: any[] }[], containerId: string): void {
+function renderGroupedUI(data: { week: string, ranks: any[] }[], containerId: string): void {
   const container = select(`#${containerId}`);
   container.selectAll('*').remove();
 

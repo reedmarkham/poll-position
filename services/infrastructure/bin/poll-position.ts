@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import * as cdk from 'aws-cdk-lib';
+import { App } from 'aws-cdk-lib';
 import { PollPositionStack } from '../lib/poll-position-stack';
-import { PollPositionVisualizationStack } from '../lib/poll-position-visualization-stack';
+import { PollPositionUIStack } from '../lib/poll-position-ui-stack';
 
-const app = new cdk.App();
+const app = new App();
 new PollPositionStack(app, 'PollPositionStack', {
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
@@ -11,7 +11,7 @@ new PollPositionStack(app, 'PollPositionStack', {
   },
 });
 
-new PollPositionVisualizationStack(app, 'PollPositionVisualizationStack', {
+new PollPositionUIStack(app, 'PollPositionUIStack', {
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION,

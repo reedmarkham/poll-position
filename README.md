@@ -10,10 +10,10 @@ poll-position/
 │   ├── infrastructure/         # AWS CDK stacks for deployment
 │   │   ├── bin/
 │   │   │   ├── poll-position.ts       # Main CDK app entry
-│   │   │   └── poll-position-visualization.ts    # Visualization stack entry
+│   │   │   └── poll-position-ui.ts    # UI stack entry
 │   │   ├── lib/
 │   │   │   ├── poll-position-stack.ts     # Main infrastructure (S3, Lambda, ECS)
-│   │   │   └── poll-position-visualization-stack.ts  # Visualization infrastructure (Fargate, ALB)
+│   │   │   └── poll-position-ui-stack.ts  # UI infrastructure (Fargate, ALB)
 │   │   ├── package.json        # CDK dependencies
 │   │   └── tsconfig.json       # TypeScript configuration
 │   ├── ingest/                 # Data ingestion service
@@ -25,10 +25,10 @@ poll-position/
 │   │   ├── main.py             # FastAPI app with Lambda handler
 │   │   ├── requirements.txt    # Python dependencies (includes mangum)
 │   │   └── package.json        # Service metadata
-│   └── visualization/          # Frontend visualization dashboard
+│   └── ui/          # Frontend UI dashboard
 │       ├── src/
 │       │   ├── index.ts        # Main application entry
-│       │   ├── components/     # D3.js visualization components
+│       │   ├── components/     # D3.js UI components
 │       │   └── utils/          # S3 data loading utilities
 │       ├── index.html          # HTML template
 │       ├── Dockerfile          # Container configuration  
@@ -38,7 +38,7 @@ poll-position/
 │   └── workflows/
 │       └── deploy.yml          # CI/CD pipeline for all services
 ├── package.json                # Root workspace configuration
-└── README.md                   # This documentation
+└── README.md                   
 ```
 
 ## Service Overview
@@ -65,9 +65,9 @@ FastAPI application providing:
 - S3 integration for data retrieval
 - CORS configuration for frontend integration
 
-### Visualization tool  
+### UI tool  
 Vite-based frontend featuring:
-- Interactive D3.js visualizations of poll rankings
+- Interactive D3.js UI of poll rankings
 - Real-time data loading from API endpoint
 - Containerized deployment on ECS Fargate
 
@@ -129,13 +129,13 @@ GitHub Actions workflow automatically handles:
 ### Build Process
 - **Workspace Dependencies**: Install npm workspace dependencies
 - **Service Building**: Build all services in parallel
-- **Container Images**: Build and push Docker images for ingest and visualization services
+- **Container Images**: Build and push Docker images for ingest and ui services
 - **Lambda Packaging**: Package API service for Lambda deployment
 
 ### Deployment Process  
-- **Infrastructure**: Deploy CDK stacks for main application and visualization
+- **Infrastructure**: Deploy CDK stacks for main application and ui
 - **API Gateway**: Deploy serverless API endpoints
-- **ECS Services**: Deploy containerized ingest and visualization services
+- **ECS Services**: Deploy containerized ingest and ui services
 - **Cross-service Integration**: Configure service discovery via CDK outputs
 
 ### Execution
@@ -151,11 +151,11 @@ npm install
 # Build specific service
 npm run build:api
 npm run build:infrastructure  
-npm run build:visualization
+npm run build:ui
 
 # Deploy infrastructure
 npm run deploy
 
-# Run visualization development server
-npm run dev:visualization
+# Run ui development server
+npm run dev:ui
 ```

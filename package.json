@@ -8,10 +8,10 @@
   "scripts": {
     "build": "npm run build --workspaces",
     "build:infrastructure": "npm run build -w services/infrastructure",
-    "build:visualization": "npm run build -w services/visualization",
+    "build:ui": "npm run build -w services/ui",
     "build:api": "npm run build -w services/api",
     "build:ingest": "npm run build -w services/ingest",
-    "dev:visualization": "npm run dev -w services/visualization",
+    "dev:ui": "npm run dev -w services/ui",
     "dev:api": "npm run dev -w services/api",
     "dev:ingest": "npm run dev -w services/ingest",
     "cdk": "npm run cdk -w services/infrastructure",
@@ -20,7 +20,7 @@
     "test": "npm run test --workspaces"
   },
   "devDependencies": {
-    "@types/node": "^20.8.10",
+    "@types/node": "^20.19.11",
     "typescript": "^5.3.3"
   }
 }

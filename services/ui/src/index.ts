@@ -1,10 +1,10 @@
-import { renderVisualization } from './components/visualization';
+import { renderUI } from './components/ui';
 import { loadLatestPollData } from './utils/load';
-import type { RawPollRow } from './components/visualization'; // reuse the type for clarity
+import type { RawPollRow } from './components/ui'; // reuse the type for clarity
 
 // Create the container first
 const container = document.createElement('div');
-container.id = 'visualization-container';
+container.id = 'ui-container';
 const app = document.getElementById('app');
 if (!app) throw new Error('Missing #app');
 app.appendChild(container);
@@ -18,9 +18,9 @@ async function main() {
       throw new Error('Loaded data is not an array of rows.');
     }
 
-    renderVisualization(data as RawPollRow[], 'visualization-container');
+    renderUI(data as RawPollRow[], 'ui-container');
   } catch (error) {
-    console.error('❌ Visualization load failed:', error);
+    console.error('❌ UI load failed:', error);
   }
 }
 

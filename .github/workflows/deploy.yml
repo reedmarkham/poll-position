@@ -14,11 +14,10 @@ jobs:
       AWS_REGION: ${{ secrets.AWS_REGION }}
       ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       S3_BUCKET: ${{ secrets.S3_BUCKET }}
-      VITE_API_BASE_URL: http://pollpo-pollp-7yd6ozqmio5c-1898444505.us-east-1.elb.amazonaws.com
       AWS_IAM_ARN: ${{ secrets.AWS_IAM_ARN }}
       TOOLKIT_STACK: CDKToolkit-poll-position
       STACK_NAME: PollPositionStack
-      VISUALIZATION_STACK_NAME: PollPositionVisualizationStack
+      UI_STACK_NAME: PollPositionUIStack
       BOOTSTRAP_QUALIFIER: pollpstn
       BUILD_TIMESTAMP: ${{ github.run_id }}-${{ github.run_number }}
 
@@ -52,8 +51,8 @@ jobs:
           aws ecr create-repository --repository-name poll-position --region $AWS_REGION
           aws ecr describe-repositories --repository-names poll-position-api --region $AWS_REGION || \
           aws ecr create-repository --repository-name poll-position-api --region $AWS_REGION
-          aws ecr describe-repositories --repository-names poll-position-visualization --region $AWS_REGION || \
-          aws ecr create-repository --repository-name poll-position-visualization --region $AWS_REGION
+          aws ecr describe-repositories --repository-names poll-position-ui --region $AWS_REGION || \
+          aws ecr create-repository --repository-name poll-position-ui --region $AWS_REGION
 
       # --- Backend Services ---
       - name: Build and Push Backend Docker Images
@@ -66,23 +65,32 @@ jobs:
           docker tag poll-position-api:latest ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-api:latest
           docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-api:latest
 
-      # --- Frontend (Visualization) ---
-      - name: Debug API Base URL
-        run: echo "🌐 VITE_API_BASE_URL = $VITE_API_BASE_URL"
+      # --- Frontend (UI) ---
+      - name: Extract API Base URL from CDK outputs
+        working-directory: services/infrastructure
+        run: |
+          API_BASE_URL=$(jq -r '.PollPositionStack.ApiBaseUrl // empty' cdk-outputs.json)
+          if [ -z "$API_BASE_URL" ]; then
+            echo "❌ Error: ApiBaseUrl not found in CDK outputs"
+            cat cdk-outputs.json
+            exit 1
+          fi
+          echo "VITE_API_BASE_URL=$API_BASE_URL" >> $GITHUB_ENV
+          echo "🌐 Extracted API Base URL: $API_BASE_URL"
 
-      - name: Build Visualization Docker image with env injected
-        working-directory: services/visualization
+      - name: Build UI Docker image with env injected
+        working-directory: services/ui
         run: |
           docker build \
             --no-cache \
             --build-arg VITE_API_BASE_URL=$VITE_API_BASE_URL \
-            -t poll-position-visualization \
+            -t poll-position-ui \
             -f Dockerfile .
 
-      - name: Tag and Push Visualization Docker image to ECR
+      - name: Tag and Push UI Docker image to ECR
         run: |
-          docker tag poll-position-visualization:latest ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-visualization:latest
-          docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-visualization:latest
+          docker tag poll-position-ui:latest ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-ui:latest
+          docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-ui:latest
 
       # --- Infrastructure Deployment ---
       - name: List CDK Stacks (for debug)
@@ -130,12 +138,12 @@ jobs:
             --outputs-file cdk-outputs.json \
             --require-approval never
 
-      - name: Deploy Visualization CDK Stack
+      - name: Deploy UI CDK Stack
         working-directory: services/infrastructure
         run: |
           npx cdk deploy \
             --toolkit-stack-name $TOOLKIT_STACK \
             --context bootstrapQualifier=$BOOTSTRAP_QUALIFIER \
-            $VISUALIZATION_STACK_NAME \
-            --outputs-file visualization-cdk-outputs.json \
+            $UI_STACK_NAME \
+            --outputs-file ui-cdk-outputs.json \
             --require-approval never

@@ -15,7 +15,7 @@ import { ManagedPolicy } from 'aws-cdk-lib/aws-iam';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Schedule } from 'aws-cdk-lib/aws-applicationautoscaling';
 
-export class PollPositionVisualizationStack extends Stack {
+export class PollPositionUIStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, {
       ...props,
