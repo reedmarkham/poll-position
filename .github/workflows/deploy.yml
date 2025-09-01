@@ -65,18 +65,64 @@ jobs:
           docker tag poll-position-api:latest ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-api:latest
           docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-api:latest
 
+      # --- Infrastructure Deployment ---
+      - name: List CDK Stacks (for debug)
+        working-directory: services/infrastructure
+        run: npx cdk ls
+
+      - name: Validate CDK Bootstrap Qualifier
+        run: |
+          ACTUAL_QUALIFIER=$(aws cloudformation describe-stacks \
+            --stack-name $TOOLKIT_STACK \
+            --region $AWS_REGION \
+            --query "Stacks[0].Parameters[?ParameterKey=='Qualifier'].ParameterValue" \
+            --output text)
+
+          echo "Found bootstrap qualifier: $ACTUAL_QUALIFIER"
+
+          if [ "$ACTUAL_QUALIFIER" != "$BOOTSTRAP_QUALIFIER" ]; then
+            echo "Mismatch: expected '$BOOTSTRAP_QUALIFIER' but found '$ACTUAL_QUALIFIER'"
+            exit 1
+          fi
+
+      - name: Validate CDK App Configuration
+        working-directory: services/infrastructure
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+          ACTUAL=$(jq -r '.app' cdk.json)
+          EXPECTED="npx ts-node --prefer-ts-exts bin/poll-position.ts"
+
+          if [[ "$ACTUAL" != "$EXPECTED" ]]; then
+            echo "Error: cdk.json 'app' is misconfigured."
+            echo "Expected: $EXPECTED"
+            echo "Found:    $ACTUAL"
+            exit 1
+          else
+            echo "cdk.json app configuration is correct."
+          fi
+
+      - name: Deploy Main CDK Stack
+        working-directory: services/infrastructure
+        run: |
+          npx cdk deploy \
+            --toolkit-stack-name $TOOLKIT_STACK \
+            --context bootstrapQualifier=$BOOTSTRAP_QUALIFIER \
+            $STACK_NAME \
+            --outputs-file cdk-outputs.json \
+            --require-approval never
+
       # --- Frontend (UI) ---
       - name: Extract API Base URL from CDK outputs
         working-directory: services/infrastructure
         run: |
           API_BASE_URL=$(jq -r '.PollPositionStack.ApiBaseUrl // empty' cdk-outputs.json)
           if [ -z "$API_BASE_URL" ]; then
-            echo "❌ Error: ApiBaseUrl not found in CDK outputs"
+            echo "Error: ApiBaseUrl not found in CDK outputs"
             cat cdk-outputs.json
             exit 1
           fi
           echo "VITE_API_BASE_URL=$API_BASE_URL" >> $GITHUB_ENV
-          echo "🌐 Extracted API Base URL: $API_BASE_URL"
+          echo "Extracted API Base URL: $API_BASE_URL"
 
       - name: Build UI Docker image with env injected
         working-directory: services/ui
@@ -91,52 +137,6 @@ jobs:
         run: |
           docker tag poll-position-ui:latest ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-ui:latest
           docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-ui:latest
-
-      # --- Infrastructure Deployment ---
-      - name: List CDK Stacks (for debug)
-        working-directory: services/infrastructure
-        run: npx cdk ls
-
-      - name: Validate CDK Bootstrap Qualifier
-        run: |
-          ACTUAL_QUALIFIER=$(aws cloudformation describe-stacks \
-            --stack-name $TOOLKIT_STACK \
-            --region $AWS_REGION \
-            --query "Stacks[0].Parameters[?ParameterKey=='Qualifier'].ParameterValue" \
-            --output text)
-
-          echo "✅ Found bootstrap qualifier: $ACTUAL_QUALIFIER"
-
-          if [ "$ACTUAL_QUALIFIER" != "$BOOTSTRAP_QUALIFIER" ]; then
-            echo "❌ Mismatch: expected '$BOOTSTRAP_QUALIFIER' but found '$ACTUAL_QUALIFIER'"
-            exit 1
-          fi
-
-      - name: Validate CDK App Configuration
-        working-directory: services/infrastructure
-        run: |
-          sudo apt-get update && sudo apt-get install -y jq
-          ACTUAL=$(jq -r '.app' cdk.json)
-          EXPECTED="npx ts-node --prefer-ts-exts bin/poll-position.ts"
-
-          if [[ "$ACTUAL" != "$EXPECTED" ]]; then
-            echo "❌ Error: cdk.json 'app' is misconfigured."
-            echo "Expected: $EXPECTED"
-            echo "Found:    $ACTUAL"
-            exit 1
-          else
-            echo "✅ cdk.json app configuration is correct."
-          fi
-
-      - name: Deploy Main CDK Stack
-        working-directory: services/infrastructure
-        run: |
-          npx cdk deploy \
-            --toolkit-stack-name $TOOLKIT_STACK \
-            --context bootstrapQualifier=$BOOTSTRAP_QUALIFIER \
-            $STACK_NAME \
-            --outputs-file cdk-outputs.json \
-            --require-approval never
 
       - name: Deploy UI CDK Stack
         working-directory: services/infrastructure
