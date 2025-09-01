@@ -38,7 +38,9 @@ jobs:
           node-version: '20'
 
       - name: Install Dependencies
-        run: npm install
+        run: |
+          npm install
+          cd services/infrastructure && npm install
 
       - name: Authenticate Docker with ECR
         run: |
