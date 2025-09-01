@@ -1,63 +1,6 @@
 # poll-position
 
-A monorepo for college football polling data ingestion, API, and visualization built on AWS infrastructure.
-
-The system ingests data from the CollegeFootballData API, processes it with parallel JSON parsing using Python's `concurrent.futures`, and serves both raw and cleansed data through a serverless API and interactive visualization dashboard.
-
-## Architecture
-
-**Services-based monorepo** with serverless and containerized components:
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                AWS Cloud                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌──────────────────┐    ┌─────────────────┐    ┌─────────────────────────┐ │
-│  │   ECS Fargate    │    │     Lambda      │    │      ECS Fargate        │ │
-│  │                  │    │                 │    │                         │ │
-│  │  ┌─────────────┐ │    │  ┌────────────┐ │    │  ┌─────────────────────┐ │ │
-│  │  │   Ingest    │ │    │  │    API     │ │    │  │   Visualization     │ │ │
-│  │  │   Service   │ │    │  │  Service   │ │    │  │     Service         │ │ │
-│  │  │             │ │    │  │            │ │    │  │                     │ │ │
-│  │  │ Python App  │ │    │  │  FastAPI + │ │    │  │   Vite + D3.js      │ │ │
-│  │  │ Scheduled   │ │    │  │   Mangum   │ │    │  │   Visualization     │ │ │
-│  │  └─────────────┘ │    │  └────────────┘ │    │  └─────────────────────┘ │ │
-│  └────────┬─────────┘    └─────────┬───────┘    └─────────────────────────┘ │
-│           │                        │                          │             │
-│           │              ┌─────────▼─────────┐                │             │
-│           │              │   API Gateway     │                │             │
-│           │              │                   │                │             │
-│           │              │ REST Endpoints    │                │             │
-│           │              │ CORS Config       │                │             │
-│           │              └───────────────────┘                │             │
-│           │                        │                          │             │
-│           │              ┌─────────▼─────────┐                │             │
-│           │              │ Application Load  │                │             │
-│           │              │    Balancer       │◄───────────────┘             │
-│           │              └───────────────────┘                              │
-│           │                        │                                        │
-│  ┌────────▼────────────────────────▼────────────────────────────────────────┤
-│  │                            S3 Bucket                                     │
-│  │                                                                          │
-│  │  Raw Data ──► Processed Data ──► Frontend Assets                        │
-│  └──────────────────────────────────────────────────────────────────────────┘
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────────┤
-│  │                      Supporting Services                                 │
-│  │                                                                          │
-│  │  VPC • CloudWatch Logs • Secrets Manager • ECR                          │
-│  └──────────────────────────────────────────────────────────────────────────┘
-└─────────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          GitHub Actions CI/CD                              │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  Build Container Images → Deploy Lambda → Deploy Infrastructure            │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+The system ingests data from the CollegeFootballData API, processes it, and serves both raw and cleansed data interactive visualization dashboard by way of a simple REST API both hosted on AWS.
 
 **Services directory structure**:
 
