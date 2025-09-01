@@ -1,0 +1,70 @@
+name: Deploy CDK Stack
+
+on:
+  workflow_call:
+    inputs:
+      stack-name:
+        required: true
+        type: string
+        description: 'Name of the CDK stack to deploy'
+      outputs-file:
+        required: false
+        type: string
+        default: 'cdk-outputs.json'
+        description: 'Name of the outputs file'
+      working-directory:
+        required: false
+        type: string
+        default: 'services/infrastructure'
+        description: 'Working directory for CDK commands'
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AWS_REGION:
+        required: true
+      AWS_ACCOUNT_ID:
+        required: true
+      S3_BUCKET:
+        required: true
+      AWS_IAM_ARN:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      AWS_IAM_ARN: ${{ secrets.AWS_IAM_ARN }}
+      TOOLKIT_STACK: CDKToolkit-poll-position
+      BOOTSTRAP_QUALIFIER: pollpstn
+      BUILD_TIMESTAMP: ${{ github.run_id }}-${{ github.run_number }}
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy CDK Stack
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          npx cdk deploy \
+            --toolkit-stack-name $TOOLKIT_STACK \
+            --context bootstrapQualifier=$BOOTSTRAP_QUALIFIER \
+            ${{ inputs.stack-name }} \
+            --outputs-file ${{ inputs.outputs-file }} \
+            --require-approval never
+
+      - name: Upload outputs as artifact
+        if: inputs.outputs-file != ''
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.stack-name }}-outputs
+          path: ${{ inputs.working-directory }}/${{ inputs.outputs-file }}

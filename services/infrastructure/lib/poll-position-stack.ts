@@ -215,7 +215,7 @@ export class PollPositionStack extends Stack {
       code: Code.fromAsset('../api'),
       environment: {
         S3_BUCKET: bucket.bucketName,
-        UI_URL: `http://${Fn.importValue('PollPositionVisualizationLoadBalancerURL')}`,
+        UI_URL: `http://${Fn.importValue('PollPositionUILoadBalancerURL')}`,
       },
       timeout: Duration.seconds(30),
       memorySize: 512,
@@ -233,7 +233,7 @@ export class PollPositionStack extends Stack {
         stageName: 'prod',
       },
       defaultCorsPreflightOptions: {
-        allowOrigins: [`http://${Fn.importValue('PollPositionVisualizationLoadBalancerURL')}`],
+        allowOrigins: [`http://${Fn.importValue('PollPositionUILoadBalancerURL')}`],
         allowMethods: ['GET', 'POST', 'OPTIONS'],
         allowHeaders: ['Content-Type', 'X-Amz-Date', 'Authorization', 'X-Api-Key'],
       },

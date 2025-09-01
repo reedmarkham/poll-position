@@ -32,8 +32,8 @@ export class PollPositionUIStack extends Stack {
     Tags.of(this).add('Project', commonTags.Project);
     Tags.of(this).add('Application', commonTags.Application);
 
-    const vpc = new Vpc(this, 'PollPositionVisualizationVpc', {
-      vpcName: 'poll-position-visualization-vpc',
+    const vpc = new Vpc(this, 'PollPositionUIVpc', {
+      vpcName: 'poll-position-ui-vpc',
       ipAddresses: IpAddresses.cidr('10.1.0.0/16'),
       maxAzs: 2,
       natGateways: 0,
@@ -41,28 +41,28 @@ export class PollPositionUIStack extends Stack {
       subnetConfiguration: [
         {
           cidrMask: 24,
-          name: 'poll-position-visualization-public',
+          name: 'poll-position-ui-public',
           subnetType: SubnetType.PUBLIC,
         },
       ],
     });
 
-    const cluster = new Cluster(this, 'PollPositionVisualizationCluster', {
+    const cluster = new Cluster(this, 'PollPositionUICluster', {
       vpc,
-      clusterName: 'poll-position-visualization-cluster'
+      clusterName: 'poll-position-ui-cluster'
     });
 
-    const imageUri = `${process.env.ACCOUNT_ID}.dkr.ecr.${process.env.AWS_REGION}.amazonaws.com/poll-position-visualization:latest`;
+    const imageUri = `${process.env.ACCOUNT_ID}.dkr.ecr.${process.env.AWS_REGION}.amazonaws.com/poll-position-ui:latest`;
 
-    const fargateService = new ApplicationLoadBalancedFargateService(this, 'PollPositionVisualizationService', {
+    const fargateService = new ApplicationLoadBalancedFargateService(this, 'PollPositionUIService', {
       cluster,
-      serviceName: 'poll-position-visualization-service',
+      serviceName: 'poll-position-ui-service',
       memoryLimitMiB: 512,
       cpu: 256,
       desiredCount: 1,
       publicLoadBalancer: true,
       assignPublicIp: true,
-      loadBalancerName: 'poll-position-visualization-alb',
+      loadBalancerName: 'poll-position-ui-alb',
       capacityProviderStrategies: [
         {
           capacityProvider: 'FARGATE_SPOT',
@@ -143,10 +143,10 @@ export class PollPositionUIStack extends Stack {
     });
 
     // Output the ELB URL for use by the API
-    new CfnOutput(this, 'VisualizationLoadBalancerURL', {
+    new CfnOutput(this, 'UILoadBalancerURL', {
       value: fargateService.loadBalancer.loadBalancerDnsName,
-      description: 'URL of the Visualization Load Balancer',
-      exportName: 'PollPositionVisualizationLoadBalancerURL',
+      description: 'URL of the UI Load Balancer',
+      exportName: 'PollPositionUILoadBalancerURL',
     });
   }
 }

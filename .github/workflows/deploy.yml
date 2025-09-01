@@ -103,35 +103,13 @@ jobs:
             echo "cdk.json app configuration is correct."
           fi
 
-      - name: Deploy Main CDK Stack
-        working-directory: services/infrastructure
-        run: |
-          npx cdk deploy \
-            --toolkit-stack-name $TOOLKIT_STACK \
-            --context bootstrapQualifier=$BOOTSTRAP_QUALIFIER \
-            $STACK_NAME \
-            --outputs-file cdk-outputs.json \
-            --require-approval never
-
-      # --- Frontend (UI) ---
-      - name: Extract API Base URL from CDK outputs
-        working-directory: services/infrastructure
-        run: |
-          API_BASE_URL=$(jq -r '.PollPositionStack.ApiBaseUrl // empty' cdk-outputs.json)
-          if [ -z "$API_BASE_URL" ]; then
-            echo "Error: ApiBaseUrl not found in CDK outputs"
-            cat cdk-outputs.json
-            exit 1
-          fi
-          echo "VITE_API_BASE_URL=$API_BASE_URL" >> $GITHUB_ENV
-          echo "Extracted API Base URL: $API_BASE_URL"
-
-      - name: Build UI Docker image with env injected
+      # --- Frontend (UI) Build and Deploy FIRST ---
+      - name: Build UI Docker image
         working-directory: services/ui
         run: |
           docker build \
             --no-cache \
-            --build-arg VITE_API_BASE_URL=$VITE_API_BASE_URL \
+            --build-arg VITE_API_BASE_URL=http://localhost:3000 \
             -t poll-position-ui \
             -f Dockerfile .
 
@@ -140,12 +118,21 @@ jobs:
           docker tag poll-position-ui:latest ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-ui:latest
           docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-ui:latest
 
-      - name: Deploy UI CDK Stack
+      - name: Deploy UI CDK Stack (first to create export)
         working-directory: services/infrastructure
         run: |
           npx cdk deploy \
             --toolkit-stack-name $TOOLKIT_STACK \
             --context bootstrapQualifier=$BOOTSTRAP_QUALIFIER \
             $UI_STACK_NAME \
-            --outputs-file ui-cdk-outputs.json \
+            --require-approval never
+
+      # --- Main Stack Deploy (after UI) ---
+      - name: Deploy Main CDK Stack
+        working-directory: services/infrastructure
+        run: |
+          npx cdk deploy \
+            --toolkit-stack-name $TOOLKIT_STACK \
+            --context bootstrapQualifier=$BOOTSTRAP_QUALIFIER \
+            $STACK_NAME \
             --require-approval never
