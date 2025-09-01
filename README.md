@@ -1,6 +1,6 @@
 # poll-position
 
-The system ingests data from the CollegeFootballData API, processes it, and serves both raw and cleansed data interactive visualization dashboard by way of a simple REST API both hosted on AWS.
+The system ingests data from the CollegeFootballData API, processes it, and serves both raw and cleansed data interactive visualization dashboard by way of a simple API both hosted on AWS.
 
 **Services directory structure**:
 
