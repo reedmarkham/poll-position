@@ -4,19 +4,17 @@ import {
   DefaultStackSynthesizer, 
   Tags, 
   Duration, 
-  RemovalPolicy,
   CfnOutput 
 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { Vpc, IpAddresses, SubnetType } from 'aws-cdk-lib/aws-ec2';
-import { Cluster, ContainerImage, LogDrivers } from 'aws-cdk-lib/aws-ecs';
+import { ContainerImage, LogDrivers } from 'aws-cdk-lib/aws-ecs';
 import { ApplicationLoadBalancedFargateService } from 'aws-cdk-lib/aws-ecs-patterns';
 import { ManagedPolicy } from 'aws-cdk-lib/aws-iam';
-import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Schedule } from 'aws-cdk-lib/aws-applicationautoscaling';
+import { PollPositionSharedStack } from './poll-position-shared-stack';
 
 export class PollPositionUIStack extends Stack {
-  constructor(scope: Construct, id: string, props?: StackProps) {
+  constructor(scope: Construct, id: string, sharedStack: PollPositionSharedStack, props?: StackProps) {
     super(scope, id, {
       ...props,
       synthesizer: new DefaultStackSynthesizer({
@@ -32,32 +30,16 @@ export class PollPositionUIStack extends Stack {
     Tags.of(this).add('Project', commonTags.Project);
     Tags.of(this).add('Application', commonTags.Application);
 
-    const vpc = new Vpc(this, 'PollPositionUIVpc', {
-      vpcName: 'poll-position-ui-vpc',
-      ipAddresses: IpAddresses.cidr('10.1.0.0/16'),
-      maxAzs: 2,
-      natGateways: 0,
-      restrictDefaultSecurityGroup: false,
-      subnetConfiguration: [
-        {
-          cidrMask: 24,
-          name: 'poll-position-ui-public',
-          subnetType: SubnetType.PUBLIC,
-        },
-      ],
-    });
-
-    const cluster = new Cluster(this, 'PollPositionUICluster', {
-      vpc,
-      clusterName: 'poll-position-ui-cluster'
-    });
+    // Use shared VPC and cluster
+    const vpc = sharedStack.vpc;
+    const cluster = sharedStack.cluster;
 
     const imageUri = `${process.env.ACCOUNT_ID}.dkr.ecr.${process.env.AWS_REGION}.amazonaws.com/poll-position-ui:latest`;
 
     const fargateService = new ApplicationLoadBalancedFargateService(this, 'PollPositionUIService', {
       cluster,
       serviceName: 'poll-position-ui-service',
-      memoryLimitMiB: 512,
+      memoryLimitMiB: 256,
       cpu: 256,
       desiredCount: 1,
       publicLoadBalancer: true,
@@ -78,11 +60,7 @@ export class PollPositionUIStack extends Stack {
         },
         logDriver: LogDrivers.awsLogs({ 
           streamPrefix: 'PollPositionUI',
-          logGroup: new LogGroup(this, 'PollPositionUILogGroup', {
-            logGroupName: '/ecs/poll-position-ui',
-            retention: RetentionDays.ONE_WEEK,
-            removalPolicy: RemovalPolicy.DESTROY,
-          }),
+          logGroup: sharedStack.logGroup,
         }),
       },
     });
@@ -142,7 +120,6 @@ export class PollPositionUIStack extends Stack {
       maxCapacity: 10,
     });
 
-    // Output the ELB URL for use by the API
     new CfnOutput(this, 'UILoadBalancerURL', {
       value: fargateService.loadBalancer.loadBalancerDnsName,
       description: 'URL of the UI Load Balancer',
