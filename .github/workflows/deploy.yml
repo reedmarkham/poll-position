@@ -89,7 +89,7 @@ jobs:
           fi
 
       - name: Validate CDK App Configuration
-        working-directory: services/infrastructure
+        working-directory: infrastructure
         run: |
           sudo apt-get update && sudo apt-get install -y jq
           ACTUAL=$(jq -r '.app' cdk.json)
