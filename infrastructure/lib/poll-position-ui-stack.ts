@@ -40,7 +40,7 @@ export class PollPositionUIStack extends Stack {
       cluster,
       serviceName: 'poll-position-ui-service',
       memoryLimitMiB: 256,
-      cpu: 256,
+      cpu: 128,
       desiredCount: 1,
       publicLoadBalancer: true,
       assignPublicIp: true,
