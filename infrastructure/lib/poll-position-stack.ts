@@ -27,7 +27,6 @@ import {
   FargatePlatformVersion 
 } from 'aws-cdk-lib/aws-ecs';
 import { 
-  ApplicationLoadBalancedFargateService, 
   ScheduledFargateTask 
 } from 'aws-cdk-lib/aws-ecs-patterns';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
@@ -207,7 +206,7 @@ export class PollPositionStack extends Stack {
       functionName: 'poll-position-api',
       runtime: Runtime.PYTHON_3_10,
       handler: 'main.handler',
-      code: Code.fromAsset('services/api'),
+      code: Code.fromAsset('../services/api'),
       environment: {
         S3_BUCKET: bucket.bucketName,
         UI_URL: `http://${Fn.importValue('PollPositionUILoadBalancerURL')}`,
