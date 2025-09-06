@@ -63,7 +63,7 @@ export class PollPositionUIStack extends Stack {
           imageRepositoryType: 'ECR',
         },
         authenticationConfiguration: {
-          accessRoleArn: sharedStack.appRunnerInstanceRole.roleArn,
+          accessRoleArn: sharedStack.appRunnerAccessRole.roleArn,
         },
       },
       instanceConfiguration: {

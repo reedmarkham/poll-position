@@ -29,6 +29,7 @@ export class PollPositionSharedStack extends Stack {
   public readonly taskRole: Role;
   public readonly executionRole: Role;
   public readonly appRunnerInstanceRole: Role;
+  public readonly appRunnerAccessRole: Role;
   public readonly logGroup: LogGroup;
 
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -142,12 +143,12 @@ export class PollPositionSharedStack extends Stack {
       resources: ["*"],
     }));
 
-    // App Runner Instance Role - separate from ECS execution role
-    this.appRunnerInstanceRole = new Role(this, 'PollPositionAppRunnerInstanceRole', {
-      roleName: 'poll-position-apprunner-instance-role',
-      assumedBy: new ServicePrincipal('tasks.apprunner.amazonaws.com'),
+    // App Runner Access Role for ECR authentication
+    this.appRunnerAccessRole = new Role(this, 'PollPositionAppRunnerAccessRole', {
+      roleName: 'poll-position-apprunner-access-role',
+      assumedBy: new ServicePrincipal('build.apprunner.amazonaws.com'),
     });
-    this.appRunnerInstanceRole.addToPolicy(new PolicyStatement({
+    this.appRunnerAccessRole.addToPolicy(new PolicyStatement({
       actions: [
         "ecr:GetAuthorizationToken",
         "ecr:BatchCheckLayerAvailability",
@@ -156,6 +157,12 @@ export class PollPositionSharedStack extends Stack {
       ],
       resources: ["*"],
     }));
+
+    // App Runner Instance Role for running tasks
+    this.appRunnerInstanceRole = new Role(this, 'PollPositionAppRunnerInstanceRole', {
+      roleName: 'poll-position-apprunner-instance-role',
+      assumedBy: new ServicePrincipal('tasks.apprunner.amazonaws.com'),
+    });
 
     // Grant S3 permissions to shared task role
     this.bucket.grantReadWrite(this.taskRole);
@@ -229,6 +236,12 @@ export class PollPositionSharedStack extends Stack {
       value: this.appRunnerInstanceRole.roleArn,
       description: 'App Runner Instance Role ARN',
       exportName: 'PollPositionSharedAppRunnerInstanceRoleArn',
+    });
+
+    new CfnOutput(this, 'AppRunnerAccessRoleArn', {
+      value: this.appRunnerAccessRole.roleArn,
+      description: 'App Runner Access Role ARN for ECR',
+      exportName: 'PollPositionSharedAppRunnerAccessRoleArn',
     });
   }
 }
