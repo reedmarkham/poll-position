@@ -16,6 +16,7 @@ jobs:
       S3_BUCKET: ${{ secrets.S3_BUCKET }}
       AWS_IAM_ARN: ${{ secrets.AWS_IAM_ARN }}
       TOOLKIT_STACK: CDKToolkit-poll-position
+      SHARED_STACK_NAME: PollPositionSharedStack
       STACK_NAME: PollPositionStack
       UI_STACK_NAME: PollPositionUIStack
       BOOTSTRAP_QUALIFIER: pollpstn
@@ -118,7 +119,19 @@ jobs:
           docker tag poll-position-ui:latest ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-ui:latest
           docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/poll-position-ui:latest
 
-      - name: Deploy UI CDK Stack (first to create export)
+      # --- Deploy Shared Infrastructure Stack FIRST ---
+      - name: Deploy Shared CDK Stack (foundation)
+        working-directory: infrastructure
+        run: |
+          npx cdk deploy \
+            --toolkit-stack-name $TOOLKIT_STACK \
+            --context bootstrapQualifier=$BOOTSTRAP_QUALIFIER \
+            $SHARED_STACK_NAME \
+            --require-approval never \
+            --outputs-file shared-outputs.json
+
+      # --- Deploy UI Stack (depends on shared) ---
+      - name: Deploy UI CDK Stack
         working-directory: infrastructure
         run: |
           npx cdk deploy \
@@ -128,7 +141,7 @@ jobs:
             --require-approval never \
             --outputs-file ui-outputs.json
 
-      # --- Main Stack Deploy (after UI) ---
+      # --- Deploy Main Stack (depends on shared) ---
       - name: Deploy Main CDK Stack
         working-directory: infrastructure
         run: |
