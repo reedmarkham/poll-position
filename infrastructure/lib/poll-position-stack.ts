@@ -24,7 +24,6 @@ import {
   ContainerImage, 
   LogDriver, 
   Secret, 
-  CfnService, 
   FargatePlatformVersion 
 } from 'aws-cdk-lib/aws-ecs';
 import { 
@@ -177,14 +176,14 @@ export class PollPositionStack extends Stack {
       }),
       environment: {
         S3_BUCKET: bucket.bucketName,
-        SEASON_START_YEAR: process.env.SEASON_START_YEAR || '2024',
+        SEASON_START_YEAR: new Date().getFullYear().toString(),
       },
       secrets: {
         CFB_API_KEY: Secret.fromSecretsManager(cfbSecret, 'CFB_API_KEY'),
       },
     });
 
-    const scheduledTask = new ScheduledFargateTask(this, 'ScheduledPollPositionTask', {
+    new ScheduledFargateTask(this, 'ScheduledPollPositionTask', {
       cluster,
       scheduledFargateTaskDefinitionOptions: {
         taskDefinition: taskDef,
@@ -193,13 +192,6 @@ export class PollPositionStack extends Stack {
       subnetSelection: { subnetType: SubnetType.PUBLIC },
       platformVersion: FargatePlatformVersion.LATEST,
     });
-
-    // Add current year as environment variable override for scheduled task
-    const cfnService = scheduledTask.node.findChild('ScheduledTaskDef') as CfnService;
-    cfnService.addPropertyOverride('TaskDefinition.ContainerDefinitions.0.Environment', [
-      { Name: 'S3_BUCKET', Value: bucket.bucketName },
-      { Name: 'SEASON_START_YEAR', Value: new Date().getFullYear().toString() },
-    ]);
 
     new CfnOutput(this, 'AdHocTaskCommand', {
       value: `aws ecs run-task \
@@ -210,11 +202,6 @@ export class PollPositionStack extends Stack {
     });
 
     // Lambda function for API
-    const apiLambdaLogGroup = new LogGroup(this, 'APILambdaLogGroup', {
-      logGroupName: '/aws/lambda/poll-position-api',
-      retention: RetentionDays.ONE_WEEK,
-      removalPolicy: RemovalPolicy.DESTROY,
-    });
 
     const apiLambda = new Function(this, 'PollPositionAPILambda', {
       functionName: 'poll-position-api',
