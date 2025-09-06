@@ -10,7 +10,7 @@ import requests, boto3, polars as pl
 
 API_KEY: Optional[str] = os.getenv("CFB_API_KEY")
 BUCKET: Optional[str] = os.getenv("S3_BUCKET")
-YEAR: int = 2024
+YEAR: int = int(os.getenv("SEASON_START_YEAR", "2024"))
 TIMESTAMP: str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%SZ")
 
 s3 = boto3.client("s3")
@@ -59,7 +59,7 @@ class FlattenedRow(TypedDict, total=False):
     firstPlaceVotes: int
     points: int
 
-def fetch_and_upload_data(endpoint: str, params: Dict[str, int], s3_key_prefix: str) -> None:
+def fetch_and_upload_data(endpoint: str, params: Dict[str, int], s3_key_prefix: str, year: int) -> None:
     """
     :param endpoint: API endpoint to query
     :param params: Query parameters for the API request
@@ -72,15 +72,16 @@ def fetch_and_upload_data(endpoint: str, params: Dict[str, int], s3_key_prefix: 
     )
     response.raise_for_status()
     data = response.json()
-    s3_key: str = f"{s3_key_prefix}_{TIMESTAMP}.json"
+    s3_key: str = f"{year}/{s3_key_prefix}_{TIMESTAMP}.json"
     s3.put_object(Bucket=BUCKET, Key=s3_key, Body=json.dumps(data))
     print(f"Data successfully uploaded to s3://{BUCKET}/{s3_key}")
 
-def get_latest_s3_key(prefix: str) -> str:
+def get_latest_s3_key(prefix: str, year: int) -> str:
     """Get the latest S3 key for a given prefix."""
-    response = s3.list_objects_v2(Bucket=BUCKET, Prefix=prefix)
+    full_prefix = f"{year}/{prefix}"
+    response = s3.list_objects_v2(Bucket=BUCKET, Prefix=full_prefix)
     if "Contents" not in response:
-        raise FileNotFoundError(f"No files found with prefix {prefix}")
+        raise FileNotFoundError(f"No files found with prefix {full_prefix}")
     latest = max(response["Contents"], key=lambda x: x["LastModified"])
     return latest["Key"]
 
@@ -115,15 +116,15 @@ def flatten_rankings(rankings_data: List[SeasonDict]) -> pl.DataFrame:
     return pl.DataFrame(all_rows)
 
 
-def merge_and_write(s3_key_prefix: str) -> None:
-    rankings_key: str = get_latest_s3_key("raw/rankings_")
-    teams_key: str = get_latest_s3_key("raw/teams_")
+def merge_and_write(s3_key_prefix: str, year: int) -> None:
+    rankings_key: str = get_latest_s3_key("raw/rankings_", year)
+    teams_key: str = get_latest_s3_key("raw/teams_", year)
     rankings_data: List[SeasonDict] = read_json_from_s3(rankings_key)
     teams_data: List[TeamDict] = read_json_from_s3(teams_key)
     rankings_df: pl.DataFrame = flatten_rankings(rankings_data)
     teams_df: pl.DataFrame = pl.DataFrame(teams_data)
     merged: pl.DataFrame = rankings_df.join(teams_df, on="school", how="left")
-    out_key: str = f"{s3_key_prefix}_{TIMESTAMP}.json"
+    out_key: str = f"{year}/{s3_key_prefix}_{TIMESTAMP}.json"
     s3.put_object(
         Bucket=BUCKET,
         Key=out_key,
@@ -141,10 +142,11 @@ def main() -> None:
         fetch_and_upload_data(
             endpoint=dataset["endpoint"],
             params={"year": YEAR},
-            s3_key_prefix=dataset["s3_key_prefix"]
+            s3_key_prefix=dataset["s3_key_prefix"],
+            year=YEAR
         )
 
-    merge_and_write('cleansed/poll')
+    merge_and_write('cleansed/poll', YEAR)
 
 if __name__ == "__main__":
     main()

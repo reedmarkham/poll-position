@@ -177,13 +177,14 @@ export class PollPositionStack extends Stack {
       }),
       environment: {
         S3_BUCKET: bucket.bucketName,
+        SEASON_START_YEAR: process.env.SEASON_START_YEAR || '2024',
       },
       secrets: {
         CFB_API_KEY: Secret.fromSecretsManager(cfbSecret, 'CFB_API_KEY'),
       },
     });
 
-    new ScheduledFargateTask(this, 'ScheduledPollPositionTask', {
+    const scheduledTask = new ScheduledFargateTask(this, 'ScheduledPollPositionTask', {
       cluster,
       scheduledFargateTaskDefinitionOptions: {
         taskDefinition: taskDef,
@@ -192,6 +193,13 @@ export class PollPositionStack extends Stack {
       subnetSelection: { subnetType: SubnetType.PUBLIC },
       platformVersion: FargatePlatformVersion.LATEST,
     });
+
+    // Add current year as environment variable override for scheduled task
+    const cfnService = scheduledTask.node.findChild('ScheduledTaskDef') as CfnService;
+    cfnService.addPropertyOverride('TaskDefinition.ContainerDefinitions.0.Environment', [
+      { Name: 'S3_BUCKET', Value: bucket.bucketName },
+      { Name: 'SEASON_START_YEAR', Value: new Date().getFullYear().toString() },
+    ]);
 
     new CfnOutput(this, 'AdHocTaskCommand', {
       value: `aws ecs run-task \

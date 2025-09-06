@@ -1,24 +1,23 @@
-import { select, scaleLinear, axisLeft, axisBottom, line, max, extent, groups, group, format } from 'd3';
+import { select, scaleLinear, axisLeft, line, max, groups, group } from 'd3';
 
 export interface RawPollRow {
   week: number;
+  season: number;
   poll: string;
   rank: number;
   school: string;
+  seasonType: string;
+  conference: string;
+  firstPlaceVotes: number;
+  points: number;
   color?: string;
   logos?: string[];
 }
 
-interface FlattenedTeamRank {
-  week: number;
-  rank: number;
-  visualRank: number;
-  school: string;
-  color: string;
-}
 
 function normalizeTiedRanks(data: RawPollRow[]): RawPollRow[] {
-  return groups(data, d => d.week).flatMap(([week, rows]) => {
+  return groups(data, d => `${d.season}-${d.week}`).flatMap(([seasonWeek, rows]) => {
+    const week = rows[0].week;
     const groupedByRank = groups(rows, d => d.rank).sort((a, b) => a[0] - b[0]);
     let visualRankCounter = 1;
     return groupedByRank.flatMap(([rank, ties]) => {
@@ -30,6 +29,7 @@ function normalizeTiedRanks(data: RawPollRow[]): RawPollRow[] {
         visualRank: applyOffset
           ? rank + offset * (i - (sorted.length - 1) / 2)
           : visualRankCounter++,
+        seasonWeek: `${team.season}/${team.week}`,
       }));
     });
   });
@@ -38,21 +38,30 @@ function normalizeTiedRanks(data: RawPollRow[]): RawPollRow[] {
 export function renderUI(data: RawPollRow[], containerId: string): void {
   const normalized = normalizeTiedRanks(data);
 
-  const groupedByWeek = groups(normalized, d => d.week).map(([week, rows]) => ({
-    week: String(week),
+  const groupedBySeasonWeek = groups(normalized, d => (d as any).seasonWeek).map(([seasonWeek, rows]) => ({
+    week: String(rows[0].week),
+    season: rows[0].season,
+    seasonWeek,
     ranks: rows.map(r => ({
       rank: r.rank,
       visualRank: (r as any).visualRank,
       school: r.school,
       color: r.color,
       logos: r.logos ?? [],
+      season: r.season,
     })),
   }));
 
-  renderGroupedUI(groupedByWeek, containerId);
+  // Sort by season first, then by week
+  groupedBySeasonWeek.sort((a, b) => {
+    if (a.season !== b.season) return a.season - b.season;
+    return parseInt(a.week) - parseInt(b.week);
+  });
+
+  renderGroupedUI(groupedBySeasonWeek, containerId);
 }
 
-function renderGroupedUI(data: { week: string, ranks: any[] }[], containerId: string): void {
+function renderGroupedUI(data: { week: string, season: number, seasonWeek: string, ranks: any[] }[], containerId: string): void {
   const container = select(`#${containerId}`);
   container.selectAll('*').remove();
 
@@ -74,9 +83,12 @@ function renderGroupedUI(data: { week: string, ranks: any[] }[], containerId: st
     svg.attr('viewBox', `0 0 ${width} ${height}`);
     g.attr('transform', `translate(${margin.left},${margin.top})`);
 
-    const flattenedData = data.flatMap(week =>
-      week.ranks.map(team => ({
-        week: +week.week,
+    const flattenedData = data.flatMap((weekData, index) =>
+      weekData.ranks.map(team => ({
+        week: +weekData.week,
+        season: weekData.season,
+        seasonWeek: weekData.seasonWeek,
+        weekIndex: index, // Sequential week index for x-axis positioning
         rank: team.rank,
         visualRank: team.visualRank,
         school: team.school,
@@ -84,9 +96,9 @@ function renderGroupedUI(data: { week: string, ranks: any[] }[], containerId: st
       }))
     );
 
-    const finalWeek = max(flattenedData, d => d.week) ?? 0;
+    const maxWeekIndex = max(flattenedData, d => d.weekIndex) ?? 0;
     const topSchools = flattenedData
-      .filter(d => d.week === finalWeek)
+      .filter(d => d.weekIndex === maxWeekIndex)
       .sort((a, b) => a.rank - b.rank)
       .slice(0, 12)
       .map(d => d.school);
@@ -100,7 +112,7 @@ function renderGroupedUI(data: { week: string, ranks: any[] }[], containerId: st
     }));
 
     const xScale = scaleLinear()
-      .domain(extent(flattenedData, d => d.week) as [number, number])
+      .domain([0, maxWeekIndex])
       .range([0, innerWidth]);
 
     const yMax = max(flattenedData, d => d.visualRank) || 25;
@@ -109,9 +121,74 @@ function renderGroupedUI(data: { week: string, ranks: any[] }[], containerId: st
     const baseRadius = Math.max(4, width / 120);
     const fontSize = Math.max(8, width / 80);
 
-    g.append('g')
-      .attr('transform', `translate(0,${innerHeight})`)
-      .call(axisBottom(xScale).ticks(data.length).tickFormat(format('d')));
+    // Create custom x-axis with season/week labels
+    const xAxis = g.append('g')
+      .attr('transform', `translate(0,${innerHeight})`);
+    
+    // Add tick marks and labels
+    data.forEach((weekData, index) => {
+      const x = xScale(index);
+      
+      // Tick mark
+      xAxis.append('line')
+        .attr('x1', x)
+        .attr('x2', x)
+        .attr('y1', 0)
+        .attr('y2', 6)
+        .attr('stroke', '#ccc');
+      
+      // Season/Week label  
+      const isCurrentWeek = index === data.length - 1;
+      xAxis.append('text')
+        .attr('x', x)
+        .attr('y', 20)
+        .attr('text-anchor', 'middle')
+        .attr('font-size', Math.max(8, width / 100))
+        .attr('fill', isCurrentWeek ? '#fff' : '#ccc')
+        .attr('class', isCurrentWeek ? 'current-week-label' : 'week-label')
+        .text(weekData.seasonWeek);
+        
+      // Add pulsing animation to most recent week label
+      if (isCurrentWeek) {
+        xAxis.select('.current-week-label')
+          .style('animation', 'pulse 2s ease-in-out infinite');
+      }
+    });
+    
+    // Add CSS animation for pulsing effect
+    if (!document.getElementById('poll-position-styles')) {
+      const style = document.createElement('style');
+      style.id = 'poll-position-styles';
+      style.textContent = `
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // Add season separator lines
+    const seasonChanges = [];
+    for (let i = 1; i < data.length; i++) {
+      if (data[i].season !== data[i-1].season) {
+        seasonChanges.push(i);
+      }
+    }
+    
+    seasonChanges.forEach(changeIndex => {
+      const x = xScale(changeIndex - 0.5); // Position between weeks
+      g.append('line')
+        .attr('x1', x)
+        .attr('x2', x)
+        .attr('y1', -margin.top + 10)
+        .attr('y2', innerHeight + 10)
+        .attr('stroke', '#666')
+        .attr('stroke-width', 1)
+        .attr('stroke-dasharray', '3,3')
+        .attr('opacity', 0.6)
+        .style('pointer-events', 'none');
+    });
 
     g.append('text')
       .attr('x', innerWidth / 2)
@@ -121,9 +198,9 @@ function renderGroupedUI(data: { week: string, ranks: any[] }[], containerId: st
       .attr('fill', '#ccc')
       .text('Week');
 
-    const lineGenerator = line<FlattenedTeamRank>()
+    const lineGenerator = line<any>()
       .defined(d => d.visualRank !== undefined && d.visualRank !== null)
-      .x(d => xScale(d.week))
+      .x(d => xScale(d.weekIndex))
       .y(d => yScale(d.visualRank));
 
     const highlightLine = g.append('path')
@@ -159,7 +236,7 @@ function renderGroupedUI(data: { week: string, ranks: any[] }[], containerId: st
       .attr('stroke', 'transparent')
       .attr('stroke-width', 10)
       .style('cursor', 'pointer')
-      .on('mouseenter', function (event, d) {
+      .on('mouseenter', function (_, d) {
         highlightLine
           .attr('d', lineGenerator(d.ranks)!)
           .attr('stroke', d.color)
@@ -174,7 +251,7 @@ function renderGroupedUI(data: { week: string, ranks: any[] }[], containerId: st
       .enter()
       .append('g')
       .attr('class', 'team-point')
-      .attr('transform', d => `translate(${xScale(d.week)},${yScale(d.visualRank ?? yMax)})`);
+      .attr('transform', d => `translate(${xScale(d.weekIndex)},${yScale(d.visualRank ?? yMax)})`);
 
     points.append('circle')
       .attr('r', 0)
@@ -198,16 +275,16 @@ function renderGroupedUI(data: { week: string, ranks: any[] }[], containerId: st
       .style('opacity', 1);
 
     points.append('title')
-      .text(d => `${d.school}: Rank ${d.rank}`);
+      .text(d => `${d.school}: Rank ${d.rank} (${d.seasonWeek})`);
 
     // === Delta label rendering: 1 per team in final week ===
     const deltaX = innerWidth + 20;
-    const finalWeekData = flattenedData.filter(d => d.week === finalWeek);
+    const finalWeekData = flattenedData.filter(d => d.weekIndex === maxWeekIndex);
 
     const deltaData = finalWeekData.map(team => {
       const history = grouped.get(team.school);
       if (!history) return null;
-      const firstEntry = history.reduce((min, d) => d.week < min.week ? d : min, history[0]);
+      const firstEntry = history.reduce((min, d) => d.weekIndex < min.weekIndex ? d : min, history[0]);
       return {
         school: team.school,
         visualRank: team.visualRank,
@@ -235,9 +312,9 @@ function renderGroupedUI(data: { week: string, ranks: any[] }[], containerId: st
     deltaLabels.append('title')
       .text(d => {
         if (!d) return '';
-        if (d.delta === 0) return `${d.school} held steady since entering the 2024 AP Top 25 poll`;
+        if (d.delta === 0) return `${d.school} held steady since entering the AP Top 25 poll`;
         const verb = d.delta < 0 ? 'rose' : 'fell';
-        return `${d.school} ${verb} ${Math.abs(d.delta)} place${Math.abs(d.delta) === 1 ? '' : 's'} since entering the 2024 AP Top 25 poll`;
+        return `${d.school} ${verb} ${Math.abs(d.delta)} place${Math.abs(d.delta) === 1 ? '' : 's'} since entering the AP Top 25 poll`;
       });
 
     g.append('line')

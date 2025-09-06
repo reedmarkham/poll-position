@@ -125,7 +125,8 @@ jobs:
             --toolkit-stack-name $TOOLKIT_STACK \
             --context bootstrapQualifier=$BOOTSTRAP_QUALIFIER \
             $UI_STACK_NAME \
-            --require-approval never
+            --require-approval never \
+            --outputs-file ui-outputs.json
 
       # --- Main Stack Deploy (after UI) ---
       - name: Deploy Main CDK Stack
@@ -135,4 +136,5 @@ jobs:
             --toolkit-stack-name $TOOLKIT_STACK \
             --context bootstrapQualifier=$BOOTSTRAP_QUALIFIER \
             $STACK_NAME \
-            --require-approval never
+            --require-approval never \
+            --outputs-file main-outputs.json
