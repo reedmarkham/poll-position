@@ -28,6 +28,7 @@ export class PollPositionSharedStack extends Stack {
   public readonly bucket: Bucket;
   public readonly taskRole: Role;
   public readonly executionRole: Role;
+  public readonly appRunnerInstanceRole: Role;
   public readonly logGroup: LogGroup;
 
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -141,6 +142,21 @@ export class PollPositionSharedStack extends Stack {
       resources: ["*"],
     }));
 
+    // App Runner Instance Role - separate from ECS execution role
+    this.appRunnerInstanceRole = new Role(this, 'PollPositionAppRunnerInstanceRole', {
+      roleName: 'poll-position-apprunner-instance-role',
+      assumedBy: new ServicePrincipal('tasks.apprunner.amazonaws.com'),
+    });
+    this.appRunnerInstanceRole.addToPolicy(new PolicyStatement({
+      actions: [
+        "ecr:GetAuthorizationToken",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage"
+      ],
+      resources: ["*"],
+    }));
+
     // Grant S3 permissions to shared task role
     this.bucket.grantReadWrite(this.taskRole);
     this.taskRole.addToPolicy(new PolicyStatement({
@@ -207,6 +223,12 @@ export class PollPositionSharedStack extends Stack {
       value: this.vpc.publicSubnets.map(subnet => subnet.subnetId).join(','),
       description: 'Shared VPC Public Subnet IDs',
       exportName: 'PollPositionSharedPublicSubnetIds',
+    });
+
+    new CfnOutput(this, 'AppRunnerInstanceRoleArn', {
+      value: this.appRunnerInstanceRole.roleArn,
+      description: 'App Runner Instance Role ARN',
+      exportName: 'PollPositionSharedAppRunnerInstanceRoleArn',
     });
   }
 }
