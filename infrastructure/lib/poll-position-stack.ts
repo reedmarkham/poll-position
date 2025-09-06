@@ -1,3 +1,6 @@
+import { Construct } from 'constructs';
+
+import { PollPositionSharedStack } from './poll-position-shared-stack';
 
 import { 
   Stack, 
@@ -10,7 +13,6 @@ import {
   aws_events,
   Fn
 } from 'aws-cdk-lib';
-import { Construct } from 'constructs';
 import { SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { 
   FargateTaskDefinition, 
@@ -25,7 +27,6 @@ import {
 import { Secret as SecretsManagerSecret } from 'aws-cdk-lib/aws-secretsmanager';
 import { Function, Runtime, Code } from 'aws-cdk-lib/aws-lambda';
 import { RestApi, LambdaIntegration } from 'aws-cdk-lib/aws-apigateway';
-import { PollPositionSharedStack } from './poll-position-shared-stack';
 
 export class PollPositionStack extends Stack {
   constructor(scope: Construct, id: string, sharedStack: PollPositionSharedStack, props?: StackProps) {

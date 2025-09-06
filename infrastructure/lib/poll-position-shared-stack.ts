@@ -1,3 +1,5 @@
+import { Construct } from 'constructs';
+
 import { 
   Stack, 
   StackProps, 
@@ -7,7 +9,6 @@ import {
   Duration, 
   CfnOutput 
 } from 'aws-cdk-lib';
-import { Construct } from 'constructs';
 import { 
   Vpc, 
   SubnetType, 
